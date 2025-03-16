@@ -22,6 +22,8 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
   final TextEditingController _phoneNumberController = TextEditingController();
   final TextEditingController _workersController = TextEditingController();
   final TextEditingController _vlasnikController = TextEditingController();
+  final TextEditingController _workingDaysController = TextEditingController();
+  final TextEditingController _workingHoursController = TextEditingController();
 
   @override
   void initState() {
@@ -34,6 +36,8 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
       _workersController.text =
           (widget.initialData['radnici'] as List<dynamic>?)?.join(', ') ?? '';
       _vlasnikController.text = widget.initialData['vlasnik'] ?? '';
+      _workingDaysController.text = widget.initialData['workingDays'] ?? '';
+      _workingHoursController.text = widget.initialData['workingHours'] ?? '';
     }
   }
 
@@ -272,6 +276,77 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 20),
+                    // Working Days Field
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 5,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Working Days',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 14,
+                            ),
+                          ),
+                          TextField(
+                            controller: _workingDaysController,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              hintText: 'Enter working days (e.g., Mon-Fri)',
+                              hintStyle: TextStyle(
+                                color: Colors.white.withOpacity(0.5),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Working Hours Field
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 5,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Working Hours',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 14,
+                            ),
+                          ),
+                          TextField(
+                            controller: _workingHoursController,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              hintText:
+                                  'Enter working hours (e.g., 9 AM - 6 PM)',
+                              hintStyle: TextStyle(
+                                color: Colors.white.withOpacity(0.5),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 40),
                     // Create Salon Button
                     SizedBox(
@@ -289,7 +364,8 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                                   .map((e) => e.trim())
                                   .toList();
                           String vlasnik = _vlasnikController.text;
-
+                          String workingDays = _workingDaysController.text;
+                          String workingHours = _workingHoursController.text;
                           // Prepare the salon data
                           Map<String, dynamic> salonData = {
                             'naziv': salonName,
@@ -297,11 +373,12 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                             'brojTelefona': phoneNumber,
                             'radnici': workers,
                             'vlasnik': vlasnik,
+                            'workingDays': workingDays,
+                            'workingHours': workingHours,
                             'vlasnikId':
                                 null, // Set vlasnikId to undefined (null)
                             'kreiran': DateTime.now(),
                           };
-
                           // Save or update the salon in Firestore
                           if (widget.salonId.isEmpty) {
                             // Create a new salon
@@ -315,20 +392,20 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                                 .doc(widget.salonId)
                                 .update(salonData);
                           }
-
                           // Show success message
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Salon saved successfully'),
                             ),
                           );
-
                           // Clear input fields
                           _salonNameController.clear();
                           _addressController.clear();
                           _phoneNumberController.clear();
                           _workersController.clear();
                           _vlasnikController.clear();
+                          _workingDaysController.clear();
+                          _workingHoursController.clear();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.teal.shade800,
