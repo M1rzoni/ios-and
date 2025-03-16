@@ -5,7 +5,6 @@ import 'package:frizerski_salon/screens/SalonList.dart';
 import 'AuthService.dart';
 import 'booking_screen.dart';
 import 'RegisterScreen.dart';
-// Import the SalonCreationScreen
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,6 +18,33 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   String errorMessage = "";
   bool rememberMe = false;
+
+  // Function to handle forgot password
+  Future<void> _forgotPassword(BuildContext context) async {
+    final String email = _emailController.text.trim();
+
+    if (email.isEmpty) {
+      setState(() {
+        errorMessage = "Please enter your email address.";
+      });
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password reset email sent. Check your inbox.'),
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        errorMessage =
+            "Failed to send password reset email. Please check your email address.";
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -131,7 +157,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () {
-                          // Add your forgot password functionality here
+                          _forgotPassword(
+                            context,
+                          ); // Call the forgot password function
                         },
                         child: Text(
                           'Forgot Password?',
@@ -172,14 +200,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: 100,
                           child: ElevatedButton(
                             onPressed: () async {
-
-                              /*Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => const SalonListScreen(),
-                                ),
-                              );*/
                               // Check if the entered credentials are "admin"
                               if (_emailController.text == 'admin' &&
                                   _passwordController.text == 'admin') {
@@ -280,7 +300,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const SalonListScreen(),
+                                    builder:
+                                        (context) => const SalonListScreen(),
                                   ),
                                 );
                               }
