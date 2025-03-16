@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "1090702313790",
+    "project_id": "frizerskisalon-b34f6",
+    "storage_bucket": "frizerskisalon-b34f6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1090702313790:android:379dd323221a0a80e5446f",
+        "android_client_info": {
+          "package_name": "com.example.frizerski_salon"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1090702313790-prj20jfghakojjte124iodon0md478nn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBqmdXbPD1vBeX6PIMxke70uDBRPaYu1GI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1090702313790-prj20jfghakojjte124iodon0md478nn.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1090702313790-efam3cjeoqi3slamidpandoa7ntf3f2g.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.frizerskiSalon"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
