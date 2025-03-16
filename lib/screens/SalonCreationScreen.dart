@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'SalonList.dart'; // Import the SalonListScreen
+import 'SalonListAdmin.dart'; // Import the SalonListScreen
 
 class SalonCreationScreen extends StatefulWidget {
   final String salonId;
@@ -512,7 +512,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const SalonListScreen(),
+                              builder: (context) => const SalonListAdminScreen(),
                             ),
                           );
                         },

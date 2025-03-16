@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:frizerski_salon/screens/AppointmentsScreen.dart';
 import 'package:frizerski_salon/screens/SalonCreationScreen.dart';
 import 'package:frizerski_salon/screens/SalonList.dart';
+import 'package:frizerski_salon/screens/SalonListAdmin.dart';
 import 'AuthService.dart';
 import 'booking_screen.dart';
 import 'RegisterScreen.dart';

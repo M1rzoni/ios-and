@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:frizerski_salon/screens/SalonList.dart';
+import 'package:frizerski_salon/screens/SalonListAdmin.dart';
 import 'AuthService.dart';
 import 'booking_screen.dart';
 import 'login_screen.dart';

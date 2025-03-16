@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'SalonCreationScreen.dart'; // Import the SalonCreationScreen for editing
+import 'booking_screen.dart';
 
 class SalonListScreen extends StatelessWidget {
   const SalonListScreen({super.key});
@@ -8,26 +8,7 @@ class SalonListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Frizerski saloni"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder:
-                      (context) => const SalonCreationScreen(
-                        salonId: '',
-                        initialData: {},
-                      ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text("Frizerski saloni")),
       body: StreamBuilder(
         stream: FirebaseFirestore.instance.collection('saloni').snapshots(),
         builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
@@ -62,51 +43,23 @@ class SalonListScreen extends StatelessWidget {
                     backgroundColor: Colors.grey[300],
                     child: Icon(Icons.store, color: Colors.grey[700]),
                   ),
-                  title: Text(
-                    naziv,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  title: Text(naziv, style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(adresa),
-                      Text(
-                        " $brojTelefona",
-                        style: TextStyle(color: Colors.grey[700]),
-                      ),
+                      Text(" $brojTelefona", style: TextStyle(color: Colors.grey[700])),
                     ],
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () {
-                          // Navigate to the SalonCreationScreen for editing
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => SalonCreationScreen(
-                                    salonId: idSalona,
-                                    initialData: salon,
-                                  ),
-                            ),
-                          );
-                        },
+                  isThreeLine: true,
+                  onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => BookingScreen(idSalona: idSalona),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () async {
-                          // Delete the salon
-                          await FirebaseFirestore.instance
-                              .collection('saloni')
-                              .doc(idSalona)
-                              .delete();
-                        },
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               );
             },
