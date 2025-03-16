@@ -22,8 +22,22 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
   final TextEditingController _phoneNumberController = TextEditingController();
   final TextEditingController _workersController = TextEditingController();
   final TextEditingController _vlasnikController = TextEditingController();
-  final TextEditingController _workingDaysController = TextEditingController();
-  final TextEditingController _workingHoursController = TextEditingController();
+
+  // Variables for working days and hours
+  List<String> _selectedWorkingDays = [];
+  TimeOfDay _openingTime = TimeOfDay(hour: 9, minute: 0);
+  TimeOfDay _closingTime = TimeOfDay(hour: 18, minute: 0);
+
+  // List of days for the dropdown
+  final List<String> _daysOfWeek = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
 
   @override
   void initState() {
@@ -36,8 +50,49 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
       _workersController.text =
           (widget.initialData['radnici'] as List<dynamic>?)?.join(', ') ?? '';
       _vlasnikController.text = widget.initialData['vlasnik'] ?? '';
-      _workingDaysController.text = widget.initialData['workingDays'] ?? '';
-      _workingHoursController.text = widget.initialData['workingHours'] ?? '';
+
+      // Handle working days
+      if (widget.initialData['workingDays'] != null) {
+        _selectedWorkingDays = List<String>.from(
+          widget.initialData['workingDays'],
+        );
+      }
+
+      // Handle working hours
+      if (widget.initialData['workingHours'] != null) {
+        final hours = widget.initialData['workingHours'].split(' - ');
+        if (hours.length == 2) {
+          _openingTime = _parseTime(hours[0]);
+          _closingTime = _parseTime(hours[1]);
+        }
+      }
+    }
+  }
+
+  // Helper function to parse time from string
+  TimeOfDay _parseTime(String time) {
+    final parts = time.split(' ');
+    final timeParts = parts[0].split(':');
+    final hour = int.parse(timeParts[0]);
+    final minute = int.parse(timeParts[1]);
+    final isPM = parts[1].toLowerCase() == 'pm';
+    return TimeOfDay(hour: isPM ? hour + 12 : hour, minute: minute);
+  }
+
+  // Function to show time picker
+  Future<void> _selectTime(BuildContext context, bool isOpeningTime) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: isOpeningTime ? _openingTime : _closingTime,
+    );
+    if (picked != null) {
+      setState(() {
+        if (isOpeningTime) {
+          _openingTime = picked;
+        } else {
+          _closingTime = picked;
+        }
+      });
     }
   }
 
@@ -297,16 +352,25 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                               fontSize: 14,
                             ),
                           ),
-                          TextField(
-                            controller: _workingDaysController,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: 'Enter working days (e.g., Mon-Fri)',
-                              hintStyle: TextStyle(
-                                color: Colors.white.withOpacity(0.5),
-                              ),
-                            ),
+                          Wrap(
+                            children:
+                                _daysOfWeek.map((day) {
+                                  return FilterChip(
+                                    label: Text(day),
+                                    selected: _selectedWorkingDays.contains(
+                                      day,
+                                    ),
+                                    onSelected: (selected) {
+                                      setState(() {
+                                        if (selected) {
+                                          _selectedWorkingDays.add(day);
+                                        } else {
+                                          _selectedWorkingDays.remove(day);
+                                        }
+                                      });
+                                    },
+                                  );
+                                }).toList(),
                           ),
                         ],
                       ),
@@ -332,17 +396,27 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                               fontSize: 14,
                             ),
                           ),
-                          TextField(
-                            controller: _workingHoursController,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText:
-                                  'Enter working hours (e.g., 9 AM - 6 PM)',
-                              hintStyle: TextStyle(
-                                color: Colors.white.withOpacity(0.5),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => _selectTime(context, true),
+                                  child: Text(
+                                    'Opening: ${_openingTime.format(context)}',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                ),
                               ),
-                            ),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => _selectTime(context, false),
+                                  child: Text(
+                                    'Closing: ${_closingTime.format(context)}',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -364,8 +438,11 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                                   .map((e) => e.trim())
                                   .toList();
                           String vlasnik = _vlasnikController.text;
-                          String workingDays = _workingDaysController.text;
-                          String workingHours = _workingHoursController.text;
+
+                          // Format working hours
+                          String workingHours =
+                              '${_openingTime.format(context)} - ${_closingTime.format(context)}';
+
                           // Prepare the salon data
                           Map<String, dynamic> salonData = {
                             'naziv': salonName,
@@ -373,12 +450,12 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                             'brojTelefona': phoneNumber,
                             'radnici': workers,
                             'vlasnik': vlasnik,
-                            'workingDays': workingDays,
+                            'workingDays': _selectedWorkingDays,
                             'workingHours': workingHours,
-                            'vlasnikId':
-                                null, // Set vlasnikId to undefined (null)
+                            'vlasnikId': null,
                             'kreiran': DateTime.now(),
                           };
+
                           // Save or update the salon in Firestore
                           if (widget.salonId.isEmpty) {
                             // Create a new salon
@@ -392,20 +469,25 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                                 .doc(widget.salonId)
                                 .update(salonData);
                           }
+
                           // Show success message
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Salon saved successfully'),
                             ),
                           );
+
                           // Clear input fields
                           _salonNameController.clear();
                           _addressController.clear();
                           _phoneNumberController.clear();
                           _workersController.clear();
                           _vlasnikController.clear();
-                          _workingDaysController.clear();
-                          _workingHoursController.clear();
+                          setState(() {
+                            _selectedWorkingDays = [];
+                            _openingTime = TimeOfDay(hour: 9, minute: 0);
+                            _closingTime = TimeOfDay(hour: 18, minute: 0);
+                          });
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.teal.shade800,
