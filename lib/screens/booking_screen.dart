@@ -14,19 +14,45 @@ class BookingScreen extends StatefulWidget {
   State<BookingScreen> createState() => _BookingScreenState();
 }
 
-
 class _BookingScreenState extends State<BookingScreen> {
   final TextEditingController _nameController = TextEditingController();
   String? _selectedService;
   double? _selectedPrice;
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
-  final Map _servicePrices = {
-    'Šišanje': 13.0,
-    'Brijanje': 7.0,
-    'Šišanje + Brada': 18.0,
-  };
-  final List _services = ['Šišanje', 'Brijanje', 'Šišanje + Brada'];
+  List<Map<String, dynamic>> _services = []; // List to store fetched services
+  bool _isLoading = true; // Loading state
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchServices(); // Fetch services when the screen loads
+  }
+
+  // Fetch services from Firestore
+  void _fetchServices() async {
+    try {
+      QuerySnapshot querySnapshot =
+          await FirebaseFirestore.instance
+              .collection('saloni')
+              .doc(widget.idSalona)
+              .collection('haircuts')
+              .get();
+
+      setState(() {
+        _services =
+            querySnapshot.docs
+                .map((doc) => {'type': doc['type'], 'price': doc['price']})
+                .toList();
+        _isLoading = false; // Stop loading
+      });
+    } catch (e) {
+      print('Error fetching services: $e');
+      setState(() {
+        _isLoading = false; // Stop loading even if there's an error
+      });
+    }
+  }
 
   void _pickDateTime() {
     picker.DatePicker.showDatePicker(
@@ -185,7 +211,7 @@ class _BookingScreenState extends State<BookingScreen> {
       'datum': formattedDate,
       'vrijeme': formattedTime,
       'timestamp': FieldValue.serverTimestamp(),
-      'salonId': widget.idSalona
+      'salonId': widget.idSalona,
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -312,34 +338,43 @@ class _BookingScreenState extends State<BookingScreen> {
                                   fontSize: 14,
                                 ),
                               ),
-                              DropdownButtonFormField(
-                                value: _selectedService,
-                                items:
-                                    _services.map((service) {
-                                      return DropdownMenuItem(
-                                        value: service,
-                                        child: Text(service),
-                                      );
-                                    }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedService = value as String?;
-                                    _selectedPrice = _servicePrices[value!];
-                                  });
-                                },
-                                decoration: InputDecoration(
-                                  border: InputBorder.none,
-                                  hintText: 'Odaberite uslugu',
-                                  hintStyle: TextStyle(
-                                    color: Colors.grey.shade400,
+                              _isLoading
+                                  ? const Center(
+                                    child: CircularProgressIndicator(),
+                                  )
+                                  : DropdownButtonFormField(
+                                    value: _selectedService,
+                                    items:
+                                        _services.map((service) {
+                                          return DropdownMenuItem(
+                                            value: service['type'],
+                                            child: Text(service['type']),
+                                          );
+                                        }).toList(),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedService = value as String?;
+                                        _selectedPrice = double.parse(
+                                          _services.firstWhere(
+                                            (service) =>
+                                                service['type'] == value,
+                                          )['price'],
+                                        );
+                                      });
+                                    },
+                                    decoration: InputDecoration(
+                                      border: InputBorder.none,
+                                      hintText: 'Odaberite uslugu',
+                                      hintStyle: TextStyle(
+                                        color: Colors.grey.shade400,
+                                      ),
+                                    ),
+                                    icon: const Icon(
+                                      Icons.arrow_drop_down,
+                                      color: Color(0xFF26A69A),
+                                    ),
+                                    dropdownColor: Colors.white,
                                   ),
-                                ),
-                                icon: const Icon(
-                                  Icons.arrow_drop_down,
-                                  color: Color(0xFF26A69A),
-                                ),
-                                dropdownColor: Colors.white,
-                              ),
                             ],
                           ),
                         ),
@@ -445,7 +480,11 @@ class _BookingScreenState extends State<BookingScreen> {
                           width: double.infinity,
                           height: 50,
                           child: OutlinedButton(
-                            onPressed: () => _navigateToAppointments(context, widget.idSalona ?? ""),
+                            onPressed:
+                                () => _navigateToAppointments(
+                                  context,
+                                  widget.idSalona ?? "",
+                                ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF26A69A),
                               side: const BorderSide(color: Color(0xFF26A69A)),
