@@ -1,22 +1,48 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Stream za praćenje statusa korisnika
   Stream<User?> get userStream => _auth.authStateChanges();
 
+  Future<Map<String, dynamic>?> getUserData(String uid) async {
+    try {
+      DocumentSnapshot userDoc =
+      await _firestore.collection('users').doc(uid).get();
+      if (userDoc.exists) {
+        return userDoc.data() as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      print("Greška prilikom dohvaćanja korisničkih podataka: $e");
+      return null;
+    }
+  }
+
   // 🔹 Registracija korisnika emailom i lozinkom
   Future<User?> registerWithEmailAndPassword(
-    String email,
-    String password,
-  ) async {
+      String email,
+      String password,
+      String fullName,
+      String phoneNumber,
+      ) async {
     try {
       UserCredential userCredential = await _auth
           .createUserWithEmailAndPassword(email: email, password: password);
       print("User registered: ${userCredential.user?.email}");
+
+      await _firestore.collection('users').doc(userCredential.user?.uid).set({
+        'email': email,
+        'fullName': fullName,
+        'phoneNumber': phoneNumber,
+        'salonId': '',
+      });
+
       return userCredential.user;
     } catch (e) {
       print("Greška prilikom registracije: $e");
