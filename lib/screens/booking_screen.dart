@@ -39,11 +39,20 @@ class _BookingScreenState extends State<BookingScreen> {
               .collection('haircuts')
               .get();
 
+      // Use a Set to filter out duplicates
+      Set<String> uniqueTypes = {};
+      List<Map<String, dynamic>> uniqueServices = [];
+
+      for (var doc in querySnapshot.docs) {
+        String type = doc['type'];
+        if (!uniqueTypes.contains(type)) {
+          uniqueTypes.add(type);
+          uniqueServices.add({'type': type, 'price': doc['price']});
+        }
+      }
+
       setState(() {
-        _services =
-            querySnapshot.docs
-                .map((doc) => {'type': doc['type'], 'price': doc['price']})
-                .toList();
+        _services = uniqueServices;
         _isLoading = false; // Stop loading
       });
     } catch (e) {
@@ -52,6 +61,58 @@ class _BookingScreenState extends State<BookingScreen> {
         _isLoading = false; // Stop loading even if there's an error
       });
     }
+  }
+
+  void _navigateToAppointments(BuildContext context, String idSalona) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AppointmentsScreen(idSalona: idSalona),
+      ),
+    );
+  }
+
+  void _saveBooking() async {
+    if (_nameController.text.isEmpty ||
+        _selectedService == null ||
+        _selectedDate == null ||
+        _selectedTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Molimo popunite sva polja!'),
+          backgroundColor: Color(0xFF26A69A),
+        ),
+      );
+      return;
+    }
+
+    String formattedDate = DateFormat('dd.MM.yyyy').format(_selectedDate!);
+    String formattedTime = _selectedTime!.format(context);
+
+    await FirebaseFirestore.instance.collection('termini').add({
+      'ime': _nameController.text,
+      'usluga': _selectedService,
+      'cijena': _selectedPrice,
+      'datum': formattedDate,
+      'vrijeme': formattedTime,
+      'timestamp': FieldValue.serverTimestamp(),
+      'salonId': widget.idSalona,
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Termin uspješno zakazan!'),
+        backgroundColor: Color(0xFF26A69A),
+      ),
+    );
+
+    _nameController.clear();
+    setState(() {
+      _selectedService = null;
+      _selectedPrice = null;
+      _selectedDate = null;
+      _selectedTime = null;
+    });
   }
 
   void _pickDateTime() {
@@ -187,58 +248,6 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  void _saveBooking() async {
-    if (_nameController.text.isEmpty ||
-        _selectedService == null ||
-        _selectedDate == null ||
-        _selectedTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Molimo popunite sva polja!'),
-          backgroundColor: Color(0xFF26A69A),
-        ),
-      );
-      return;
-    }
-
-    String formattedDate = DateFormat('dd.MM.yyyy').format(_selectedDate!);
-    String formattedTime = _selectedTime!.format(context);
-
-    await FirebaseFirestore.instance.collection('termini').add({
-      'ime': _nameController.text,
-      'usluga': _selectedService,
-      'cijena': _selectedPrice,
-      'datum': formattedDate,
-      'vrijeme': formattedTime,
-      'timestamp': FieldValue.serverTimestamp(),
-      'salonId': widget.idSalona,
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Termin uspješno zakazan!'),
-        backgroundColor: Color(0xFF26A69A),
-      ),
-    );
-
-    _nameController.clear();
-    setState(() {
-      _selectedService = null;
-      _selectedPrice = null;
-      _selectedDate = null;
-      _selectedTime = null;
-    });
-  }
-
-  void _navigateToAppointments(BuildContext context, String idSalona) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AppointmentsScreen(idSalona: idSalona),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -342,6 +351,8 @@ class _BookingScreenState extends State<BookingScreen> {
                                   ? const Center(
                                     child: CircularProgressIndicator(),
                                   )
+                                  : _services.isEmpty
+                                  ? const Text('Nema dostupnih usluga')
                                   : DropdownButtonFormField(
                                     value: _selectedService,
                                     items:
@@ -354,11 +365,19 @@ class _BookingScreenState extends State<BookingScreen> {
                                     onChanged: (value) {
                                       setState(() {
                                         _selectedService = value as String?;
+                                        // Find the selected service and update the price
+                                        var selectedService = _services
+                                            .firstWhere(
+                                              (service) =>
+                                                  service['type'] == value,
+                                              orElse:
+                                                  () => {
+                                                    'type': '',
+                                                    'price': 0.0,
+                                                  },
+                                            );
                                         _selectedPrice = double.parse(
-                                          _services.firstWhere(
-                                            (service) =>
-                                                service['type'] == value,
-                                          )['price'],
+                                          selectedService['price'].toString(),
                                         );
                                       });
                                     },
