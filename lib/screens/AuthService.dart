@@ -16,6 +16,7 @@ class AuthService {
     try {
       UserCredential userCredential = await _auth
           .createUserWithEmailAndPassword(email: email, password: password);
+      print("User registered: ${userCredential.user?.email}");
       return userCredential.user;
     } catch (e) {
       print("Greška prilikom registracije: $e");
@@ -23,7 +24,6 @@ class AuthService {
     }
   }
 
-  // 🔹 Prijava korisnika emailom i lozinkom
   Future<User?> signInWithEmailAndPassword(
     String email,
     String password,
@@ -33,6 +33,7 @@ class AuthService {
         email: email,
         password: password,
       );
+      print("User logged in: ${userCredential.user?.email}");
       return userCredential.user;
     } catch (e) {
       print("Greška prilikom prijave: $e");
@@ -40,11 +41,13 @@ class AuthService {
     }
   }
 
-  // 🔹 Prijava putem Google-a
   Future<User?> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
+      if (googleUser == null) {
+        print("Google Sign-In cancelled by user.");
+        return null;
+      }
 
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
@@ -56,6 +59,7 @@ class AuthService {
       UserCredential userCredential = await _auth.signInWithCredential(
         credential,
       );
+      print("User logged in with Google: ${userCredential.user?.email}");
       return userCredential.user;
     } catch (e) {
       print("Greška prilikom prijave putem Google-a: $e");

@@ -175,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     _passwordController.text,
                                   );
                               if (user != null) {
-                                Navigator.pushReplacement(
+                                Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => const BookingScreen(),

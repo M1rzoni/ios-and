@@ -28,17 +28,27 @@ class MyApp extends StatelessWidget {
 }
 
 final GoRouter router = GoRouter(
-  initialLocation: '/splash', // Postavljamo početnu rutu na splash
+  initialLocation: '/splash', // Set initial route to Splash screen
   routes: [
-    GoRoute(path: '/splash', builder: (context, state) => Splash()),
+    GoRoute(
+      path: '/splash',
+      builder: (context, state) => Splash(), // Splash screen
+    ),
     GoRoute(
       path: '/',
       builder: (context, state) {
         final user = FirebaseAuth.instance.currentUser;
+        // Redirect to LoginScreen if user is not logged in, otherwise to HomeScreen
         return user == null ? LoginScreen() : HomeScreen();
       },
     ),
-    GoRoute(path: '/login', builder: (context, state) => LoginScreen()),
-    GoRoute(path: '/booking', builder: (context, state) => BookingScreen()),
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => LoginScreen(), // Login screen
+    ),
+    GoRoute(
+      path: '/booking',
+      builder: (context, state) => BookingScreen(), // Booking screen
+    ),
   ],
 );
