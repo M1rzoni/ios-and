@@ -15,8 +15,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final AuthService _authService = AuthService();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-      TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _phoneNumberController = TextEditingController();
   String errorMessage = "";
 
   @override
@@ -42,7 +43,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Back button
                     GestureDetector(
                       onTap: () {
                         Navigator.pop(context);
@@ -62,7 +62,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    // Register Title
                     const Text(
                       'Register',
                       style: TextStyle(
@@ -80,7 +79,75 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 40),
-                    // Email Field
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 5,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Full Name',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 14,
+                            ),
+                          ),
+                          TextField(
+                            controller: _fullNameController,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              hintText: 'Enter your full name',
+                              hintStyle: TextStyle(
+                                color: Colors.white.withOpacity(0.5),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 5,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Phone Number',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 14,
+                            ),
+                          ),
+                          TextField(
+                            controller: _phoneNumberController,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              hintText: 'Enter your phone number',
+                              hintStyle: TextStyle(
+                                color: Colors.white.withOpacity(0.5),
+                              ),
+                            ),
+                            keyboardType: TextInputType.phone,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
@@ -152,7 +219,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    // Confirm Password Field
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
@@ -188,7 +254,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 40),
-                    // Register Button
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -204,9 +269,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                           User? user = await _authService
                               .registerWithEmailAndPassword(
-                                _emailController.text,
-                                _passwordController.text,
-                              );
+                            _emailController.text,
+                            _passwordController.text,
+                            _fullNameController.text,
+                            _phoneNumberController.text,
+                          );
                           if (user != null) {
                             Navigator.push(
                               context,
