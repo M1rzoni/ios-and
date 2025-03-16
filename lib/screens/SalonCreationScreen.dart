@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'SalonList.dart'; // Import the SalonListScreen
 
 class SalonCreationScreen extends StatefulWidget {
-  const SalonCreationScreen({super.key});
+  final String salonId;
+  final Map<String, dynamic> initialData;
+
+  const SalonCreationScreen({
+    super.key,
+    this.salonId = '', // Default value for salonId
+    this.initialData = const {}, // Default value for initialData
+  });
 
   @override
   _SalonCreationScreenState createState() => _SalonCreationScreenState();
@@ -14,6 +22,20 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
   final TextEditingController _phoneNumberController = TextEditingController();
   final TextEditingController _workersController = TextEditingController();
   final TextEditingController _vlasnikController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill the form fields if initialData is provided
+    if (widget.initialData.isNotEmpty) {
+      _salonNameController.text = widget.initialData['naziv'] ?? '';
+      _addressController.text = widget.initialData['adresa'] ?? '';
+      _phoneNumberController.text = widget.initialData['brojTelefona'] ?? '';
+      _workersController.text =
+          (widget.initialData['radnici'] as List<dynamic>?)?.join(', ') ?? '';
+      _vlasnikController.text = widget.initialData['vlasnik'] ?? '';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -268,24 +290,36 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                                   .toList();
                           String vlasnik = _vlasnikController.text;
 
-                          // Save salon details to Firestore
-                          await FirebaseFirestore.instance
-                              .collection('saloni')
-                              .add({
-                                'naziv': salonName,
-                                'adresa': address,
-                                'brojTelefona': phoneNumber,
-                                'radnici': workers,
-                                'vlasnik': vlasnik,
-                                'vlasnikId':
-                                    null, // Set vlasnikId to undefined (null)
-                                'kreiran': DateTime.now(),
-                              });
+                          // Prepare the salon data
+                          Map<String, dynamic> salonData = {
+                            'naziv': salonName,
+                            'adresa': address,
+                            'brojTelefona': phoneNumber,
+                            'radnici': workers,
+                            'vlasnik': vlasnik,
+                            'vlasnikId':
+                                null, // Set vlasnikId to undefined (null)
+                            'kreiran': DateTime.now(),
+                          };
+
+                          // Save or update the salon in Firestore
+                          if (widget.salonId.isEmpty) {
+                            // Create a new salon
+                            await FirebaseFirestore.instance
+                                .collection('saloni')
+                                .add(salonData);
+                          } else {
+                            // Update an existing salon
+                            await FirebaseFirestore.instance
+                                .collection('saloni')
+                                .doc(widget.salonId)
+                                .update(salonData);
+                          }
 
                           // Show success message
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Salon created successfully'),
+                              content: Text('Salon saved successfully'),
                             ),
                           );
 
@@ -305,6 +339,33 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                         ),
                         child: const Text(
                           'Create Salon',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // View Salon List Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SalonListScreen(),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal.shade800,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text(
+                          'View Salon List',
                           style: TextStyle(fontSize: 16),
                         ),
                       ),

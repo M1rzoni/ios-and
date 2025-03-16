@@ -208,8 +208,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                   context,
                                   MaterialPageRoute(
                                     builder:
-                                        (context) =>
-                                            const SalonCreationScreen(),
+                                        (context) => const SalonCreationScreen(
+                                          salonId:
+                                              '', // Provide an empty string for new salon creation
+                                          initialData:
+                                              {}, // Provide an empty map for new salon creation
+                                        ),
                                   ),
                                 );
                               } else {
