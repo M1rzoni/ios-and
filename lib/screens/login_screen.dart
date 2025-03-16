@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:frizerski_salon/screens/SalonCreationScreen.dart';
 import 'AuthService.dart';
 import 'booking_screen.dart';
 import 'RegisterScreen.dart';
+// Import the SalonCreationScreen
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -169,22 +171,38 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: 100,
                           child: ElevatedButton(
                             onPressed: () async {
-                              User? user = await _authService
-                                  .signInWithEmailAndPassword(
-                                    _emailController.text,
-                                    _passwordController.text,
-                                  );
-                              if (user != null) {
+                              // Check if the entered credentials are "admin"
+                              if (_emailController.text == 'admin' &&
+                                  _passwordController.text == 'admin') {
+                                // Navigate to the SalonCreationScreen
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const BookingScreen(),
+                                    builder:
+                                        (context) =>
+                                            const SalonCreationScreen(),
                                   ),
                                 );
                               } else {
-                                setState(() {
-                                  errorMessage = "Prijava nije uspjela!";
-                                });
+                                // Proceed with Firebase Authentication for regular users
+                                User? user = await _authService
+                                    .signInWithEmailAndPassword(
+                                      _emailController.text,
+                                      _passwordController.text,
+                                    );
+                                if (user != null) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => const BookingScreen(),
+                                    ),
+                                  );
+                                } else {
+                                  setState(() {
+                                    errorMessage = "Prijava nije uspjela!";
+                                  });
+                                }
                               }
                             },
                             style: ElevatedButton.styleFrom(
