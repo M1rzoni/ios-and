@@ -19,6 +19,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   String errorMessage = "";
   bool rememberMe = false;
+  bool _obscurePassword =
+      true; // Add this variable to toggle password visibility
 
   // Function to handle forgot password
   Future<void> _forgotPassword(BuildContext context) async {
@@ -42,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       setState(() {
         errorMessage =
-        "Failed to send password reset email. Please check your email address.";
+            "Failed to send password reset email. Please check your email address.";
       });
     }
   }
@@ -156,8 +158,22 @@ class _LoginScreenState extends State<LoginScreen> {
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  color: Colors.white.withOpacity(0.8),
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
                             ),
-                            obscureText: true,
+                            obscureText:
+                                _obscurePassword, // Toggle password visibility
                           ),
                         ],
                       ),
@@ -194,7 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                           checkColor: Color(0xFF26A69A),
                           fillColor: MaterialStateProperty.resolveWith(
-                                (states) => Colors.white,
+                            (states) => Colors.white,
                           ),
                         ),
                         Text(
@@ -220,30 +236,33 @@ class _LoginScreenState extends State<LoginScreen> {
                                   MaterialPageRoute(
                                     builder:
                                         (context) =>
-                                    const SalonCreationScreen(),
+                                            const SalonCreationScreen(),
                                   ),
                                 );
                               } else {
                                 // Proceed with Firebase Authentication for regular users
                                 User? user = await _authService
                                     .signInWithEmailAndPassword(
-                                  _emailController.text,
-                                  _passwordController.text,
-                                );
+                                      _emailController.text,
+                                      _passwordController.text,
+                                    );
                                 if (user != null) {
                                   // Dohvati korisničke podatke iz Firestore
                                   Map<String, dynamic>? userData =
-                                  await _authService.getUserData(user.uid);
+                                      await _authService.getUserData(user.uid);
                                   if (userData != null &&
                                       userData['salonId'] != "") {
                                     _navigateToAppointments(
-                                        context, userData['salonId']);
+                                      context,
+                                      userData['salonId'],
+                                    );
                                   } else {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder:
-                                            (context) => const SalonListScreen(),
+                                            (context) =>
+                                                const SalonListScreen(),
                                       ),
                                     );
                                   }
@@ -315,7 +334,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             icon: Icon(Icons.g_mobiledata, size: 24),
                             onPressed: () async {
                               User? user =
-                              await _authService.signInWithGoogle();
+                                  await _authService.signInWithGoogle();
                               if (user != null) {
                                 Navigator.pushReplacement(
                                   context,
