@@ -6,10 +6,14 @@ import 'package:flutter_datetime_picker_plus/flutter_datetime_picker_plus.dart'
 import 'AppointmentsScreen.dart';
 
 class BookingScreen extends StatefulWidget {
-  const BookingScreen({super.key});
+  final String? idSalona;
+
+  const BookingScreen({super.key, this.idSalona});
+
   @override
   State createState() => _BookingScreenState();
 }
+
 
 class _BookingScreenState extends State {
   final TextEditingController _nameController = TextEditingController();
