@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:frizerski_salon/screens/SalonCreationScreen.dart';
+import 'package:frizerski_salon/screens/SalonList.dart';
 import 'AuthService.dart';
 import 'booking_screen.dart';
 import 'RegisterScreen.dart';
@@ -171,6 +172,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: 100,
                           child: ElevatedButton(
                             onPressed: () async {
+
+                              /*Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => const SalonListScreen(),
+                                ),
+                              );*/
                               // Check if the entered credentials are "admin"
                               if (_emailController.text == 'admin' &&
                                   _passwordController.text == 'admin') {
@@ -195,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     context,
                                     MaterialPageRoute(
                                       builder:
-                                          (context) => const BookingScreen(),
+                                          (context) => const SalonListScreen(),
                                     ),
                                   );
                                 } else {
@@ -271,7 +280,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const BookingScreen(),
+                                    builder: (context) => const SalonListScreen(),
                                   ),
                                 );
                               }

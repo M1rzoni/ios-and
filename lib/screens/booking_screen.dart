@@ -11,11 +11,11 @@ class BookingScreen extends StatefulWidget {
   const BookingScreen({super.key, this.idSalona});
 
   @override
-  State createState() => _BookingScreenState();
+  State<BookingScreen> createState() => _BookingScreenState();
 }
 
 
-class _BookingScreenState extends State {
+class _BookingScreenState extends State<BookingScreen> {
   final TextEditingController _nameController = TextEditingController();
   String? _selectedService;
   double? _selectedPrice;
@@ -185,6 +185,7 @@ class _BookingScreenState extends State {
       'datum': formattedDate,
       'vrijeme': formattedTime,
       'timestamp': FieldValue.serverTimestamp(),
+      'salonId': widget.idSalona
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
