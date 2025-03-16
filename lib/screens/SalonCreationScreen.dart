@@ -1,8 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class SalonCreationScreen extends StatelessWidget {
+class SalonCreationScreen extends StatefulWidget {
   const SalonCreationScreen({super.key});
+
+  @override
+  _SalonCreationScreenState createState() => _SalonCreationScreenState();
+}
+
+class _SalonCreationScreenState extends State<SalonCreationScreen> {
+  final TextEditingController _salonNameController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _phoneNumberController = TextEditingController();
+  final TextEditingController _workersController = TextEditingController();
+  final TextEditingController _vlasnikController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -86,6 +97,7 @@ class SalonCreationScreen extends StatelessWidget {
                             ),
                           ),
                           TextField(
+                            controller: _salonNameController,
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
@@ -120,6 +132,7 @@ class SalonCreationScreen extends StatelessWidget {
                             ),
                           ),
                           TextField(
+                            controller: _addressController,
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
@@ -154,6 +167,7 @@ class SalonCreationScreen extends StatelessWidget {
                             ),
                           ),
                           TextField(
+                            controller: _phoneNumberController,
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
@@ -188,10 +202,46 @@ class SalonCreationScreen extends StatelessWidget {
                             ),
                           ),
                           TextField(
+                            controller: _workersController,
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
                               hintText: 'Enter workers (comma separated)',
+                              hintStyle: TextStyle(
+                                color: Colors.white.withOpacity(0.5),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Vlasnik Field
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 5,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Vlasnik',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 14,
+                            ),
+                          ),
+                          TextField(
+                            controller: _vlasnikController,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              hintText: 'Enter vlasnik',
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
@@ -207,26 +257,44 @@ class SalonCreationScreen extends StatelessWidget {
                       height: 50,
                       child: ElevatedButton(
                         onPressed: () async {
-                          // Add logic to save salon details to Firestore
+                          // Get values from input fields
+                          String salonName = _salonNameController.text;
+                          String address = _addressController.text;
+                          String phoneNumber = _phoneNumberController.text;
+                          List<String> workers =
+                              _workersController.text
+                                  .split(',')
+                                  .map((e) => e.trim())
+                                  .toList();
+                          String vlasnik = _vlasnikController.text;
+
+                          // Save salon details to Firestore
                           await FirebaseFirestore.instance
                               .collection('saloni')
                               .add({
-                                'naziv':
-                                    'Salon Name', // Replace with actual field values
-                                'adresa': 'Address',
-                                'brojTelefona': 'Phone Number',
-                                'radnici': [
-                                  'Worker1',
-                                  'Worker2',
-                                ], // Replace with actual workers
+                                'naziv': salonName,
+                                'adresa': address,
+                                'brojTelefona': phoneNumber,
+                                'radnici': workers,
+                                'vlasnik': vlasnik,
+                                'vlasnikId':
+                                    null, // Set vlasnikId to undefined (null)
                                 'kreiran': DateTime.now(),
                               });
 
+                          // Show success message
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Salon created successfully'),
                             ),
                           );
+
+                          // Clear input fields
+                          _salonNameController.clear();
+                          _addressController.clear();
+                          _phoneNumberController.clear();
+                          _workersController.clear();
+                          _vlasnikController.clear();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.teal.shade800,
