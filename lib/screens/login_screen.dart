@@ -259,7 +259,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   // Dohvati korisničke podatke iz Firestore
                                   Map<String, dynamic>? userData =
                                       await _authService.getUserData(user.uid);
-                                  if (userData != null) {
+                                  if (userData != null &&
+                                      userData['salonId'] != "") {
                                     bool isOwner =
                                         userData['salonId'] != null &&
                                         userData['salonId'] != "";
