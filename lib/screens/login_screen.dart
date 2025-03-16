@@ -51,11 +51,19 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // Function to navigate to AppointmentsScreen
-  void _navigateToAppointments(BuildContext context, String idSalona) {
+  void _navigateToAppointments(
+    BuildContext context,
+    String idSalona,
+    bool isOwner, // Pass the isOwner parameter
+  ) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AppointmentsScreen(idSalona: idSalona),
+        builder:
+            (context) => AppointmentsScreen(
+              idSalona: idSalona,
+              isOwner: isOwner, // Pass the isOwner value
+            ),
       ),
     );
   }
@@ -251,11 +259,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                   // Dohvati korisničke podatke iz Firestore
                                   Map<String, dynamic>? userData =
                                       await _authService.getUserData(user.uid);
-                                  if (userData != null &&
-                                      userData['salonId'] != "") {
+                                  if (userData != null) {
+                                    bool isOwner =
+                                        userData['salonId'] != null &&
+                                        userData['salonId'] != "";
+                                    print(
+                                      'User is owner: $isOwner',
+                                    ); // Debugging
                                     _navigateToAppointments(
                                       context,
-                                      userData['salonId'],
+                                      userData['salonId'] ??
+                                          "", // Pass salonId (empty if not an owner)
+                                      isOwner, // Pass the isOwner value
                                     );
                                   } else {
                                     Navigator.push(

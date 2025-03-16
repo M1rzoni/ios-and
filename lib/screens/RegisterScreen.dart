@@ -16,7 +16,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final AuthService _authService = AuthService();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _phoneNumberController = TextEditingController();
   String errorMessage = "";
@@ -270,11 +271,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                           User? user = await _authService
                               .registerWithEmailAndPassword(
-                            _emailController.text,
-                            _passwordController.text,
-                            _fullNameController.text,
-                            _phoneNumberController.text,
-                          );
+                                _emailController.text,
+                                _passwordController.text,
+                                _fullNameController.text,
+                                _phoneNumberController.text,
+                              );
                           if (user != null) {
                             Navigator.push(
                               context,
