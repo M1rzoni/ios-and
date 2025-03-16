@@ -204,10 +204,12 @@ class _BookingScreenState extends State<BookingScreen> {
     });
   }
 
-  void _navigateToAppointments() {
+  void _navigateToAppointments(BuildContext context, String idSalona) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const AppointmentsScreen()),
+      MaterialPageRoute(
+        builder: (context) => AppointmentsScreen(idSalona: idSalona),
+      ),
     );
   }
 
@@ -443,7 +445,7 @@ class _BookingScreenState extends State<BookingScreen> {
                           width: double.infinity,
                           height: 50,
                           child: OutlinedButton(
-                            onPressed: _navigateToAppointments,
+                            onPressed: () => _navigateToAppointments(context, widget.idSalona ?? ""),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF26A69A),
                               side: const BorderSide(color: Color(0xFF26A69A)),

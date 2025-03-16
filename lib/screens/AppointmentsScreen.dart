@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AppointmentsScreen extends StatelessWidget {
-  const AppointmentsScreen({super.key});
+  final String idSalona;
+
+  const AppointmentsScreen({super.key, required this.idSalona});
 
   void _deleteAppointment(String docId, BuildContext context) async {
     await FirebaseFirestore.instance.collection('termini').doc(docId).delete();
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Termin je obrisan!')));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Termin je obrisan!')));
   }
 
   @override
@@ -19,11 +19,23 @@ class AppointmentsScreen extends StatelessWidget {
         stream:
             FirebaseFirestore.instance
                 .collection('termini')
+                .where('salonId', isEqualTo: idSalona)
                 .orderBy('timestamp', descending: true)
                 .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            print('Loading data...');
             return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            print('Error: ${snapshot.error}');
+            return const Center(child: Text('Došlo je do greške.'));
+          }
+
+          if (!snapshot.hasData) {
+            print('No data found');
+            return const Center(child: Text('Nema podataka.'));
           }
 
           var appointments = snapshot.data!.docs;
