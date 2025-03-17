@@ -9,7 +9,13 @@ class SalonListAdminScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Frizerski saloni"),
+        title: const Text(
+          "Frizerski saloni",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: const Color(0xFF26A69A), // Teal color
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -32,11 +38,18 @@ class SalonListAdminScreen extends StatelessWidget {
         stream: FirebaseFirestore.instance.collection('saloni').snapshots(),
         builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF26A69A)),
+            );
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("Nema dostupnih salona."));
+            return Center(
+              child: Text(
+                "Nema dostupnih salona.",
+                style: TextStyle(color: Colors.grey[700], fontSize: 16),
+              ),
+            );
           }
 
           var salons = snapshot.data!.docs;
@@ -52,60 +65,111 @@ class SalonListAdminScreen extends StatelessWidget {
               String brojTelefona = salon['brojTelefona'] ?? 'Nema broja';
 
               return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(15),
                 ),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.grey[300],
-                    child: Icon(Icons.store, color: Colors.grey[700]),
-                  ),
-                  title: Text(
-                    naziv,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(adresa),
-                      Text(
-                        " $brojTelefona",
-                        style: TextStyle(color: Colors.grey[700]),
-                      ),
-                    ],
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () {
-                          // Navigate to the SalonCreationScreen for editing
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => SalonCreationScreen(
-                                    salonId: idSalona,
-                                    initialData: salon,
-                                  ),
+                elevation: 4,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(15),
+                  onTap: () {
+                    // Navigate to the SalonCreationScreen for editing
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => SalonCreationScreen(
+                              salonId: idSalona,
+                              initialData: salon,
                             ),
-                          );
-                        },
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () async {
-                          // Delete the salon
-                          await FirebaseFirestore.instance
-                              .collection('saloni')
-                              .doc(idSalona)
-                              .delete();
-                        },
-                      ),
-                    ],
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        // Salon Icon
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF26A69A).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          child: const Icon(
+                            Icons.store,
+                            color: Color(0xFF26A69A),
+                            size: 30,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Salon Details
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                naziv,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF26A69A),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                adresa,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                brojTelefona,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Edit and Delete Buttons
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () {
+                                // Navigate to the SalonCreationScreen for editing
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => SalonCreationScreen(
+                                          salonId: idSalona,
+                                          initialData: salon,
+                                        ),
+                                  ),
+                                );
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () async {
+                                // Delete the salon
+                                await FirebaseFirestore.instance
+                                    .collection('saloni')
+                                    .doc(idSalona)
+                                    .delete();
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );

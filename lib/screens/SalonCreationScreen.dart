@@ -448,7 +448,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                             'naziv': salonName,
                             'adresa': address,
                             'brojTelefona': phoneNumber,
-                            'radnici': workers,
+                            'radnici': workers, // Save workers as a list
                             'vlasnik': vlasnik,
                             'workingDays': _selectedWorkingDays,
                             'workingHours': workingHours,
@@ -512,7 +512,8 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const SalonListAdminScreen(),
+                              builder:
+                                  (context) => const SalonListAdminScreen(),
                             ),
                           );
                         },

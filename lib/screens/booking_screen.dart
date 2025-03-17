@@ -21,12 +21,15 @@ class _BookingScreenState extends State<BookingScreen> {
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   List<Map<String, dynamic>> _services = []; // List to store fetched services
+  List<String> _workers = []; // List to store fetched workers
   bool _isLoading = true; // Loading state
+  String? _selectedWorker; // Selected worker
 
   @override
   void initState() {
     super.initState();
     _fetchServices(); // Fetch services when the screen loads
+    _fetchWorkers(); // Fetch workers when the screen loads
   }
 
   // Fetch services from Firestore
@@ -63,6 +66,26 @@ class _BookingScreenState extends State<BookingScreen> {
     }
   }
 
+  // Fetch workers from Firestore
+  void _fetchWorkers() async {
+    try {
+      DocumentSnapshot salonSnapshot =
+          await FirebaseFirestore.instance
+              .collection('saloni')
+              .doc(widget.idSalona)
+              .get();
+
+      if (salonSnapshot.exists) {
+        List<dynamic> workers = salonSnapshot['radnici'] ?? [];
+        setState(() {
+          _workers = workers.cast<String>();
+        });
+      }
+    } catch (e) {
+      print('Error fetching workers: $e');
+    }
+  }
+
   void _navigateToAppointments(BuildContext context, String idSalona) {
     Navigator.push(
       context,
@@ -76,7 +99,8 @@ class _BookingScreenState extends State<BookingScreen> {
     if (_nameController.text.isEmpty ||
         _selectedService == null ||
         _selectedDate == null ||
-        _selectedTime == null) {
+        _selectedTime == null ||
+        _selectedWorker == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Molimo popunite sva polja!'),
@@ -97,6 +121,7 @@ class _BookingScreenState extends State<BookingScreen> {
       'vrijeme': formattedTime,
       'timestamp': FieldValue.serverTimestamp(),
       'salonId': widget.idSalona,
+      'worker': _selectedWorker, // Save the selected worker
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -112,6 +137,7 @@ class _BookingScreenState extends State<BookingScreen> {
       _selectedPrice = null;
       _selectedDate = null;
       _selectedTime = null;
+      _selectedWorker = null;
     });
   }
 
@@ -251,6 +277,16 @@ class _BookingScreenState extends State<BookingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Zakazivanje termina'),
+        backgroundColor: const Color(0xFF26A69A), // Teal color
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context); // Navigate back
+          },
+        ),
+      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -265,17 +301,6 @@ class _BookingScreenState extends State<BookingScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Text(
-                  'Zakazivanje termina',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.all(20),
@@ -384,6 +409,60 @@ class _BookingScreenState extends State<BookingScreen> {
                                     decoration: InputDecoration(
                                       border: InputBorder.none,
                                       hintText: 'Odaberite uslugu',
+                                      hintStyle: TextStyle(
+                                        color: Colors.grey.shade400,
+                                      ),
+                                    ),
+                                    icon: const Icon(
+                                      Icons.arrow_drop_down,
+                                      color: Color(0xFF26A69A),
+                                    ),
+                                    dropdownColor: Colors.white,
+                                  ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        // Worker dropdown
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 5,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Odaberite radnika',
+                                style: TextStyle(
+                                  color: Color(0xFF26A69A),
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              _workers.isEmpty
+                                  ? const Text('Nema dostupnih radnika')
+                                  : DropdownButtonFormField(
+                                    value: _selectedWorker,
+                                    items:
+                                        _workers.map((worker) {
+                                          return DropdownMenuItem(
+                                            value: worker,
+                                            child: Text(worker),
+                                          );
+                                        }).toList(),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedWorker = value as String?;
+                                      });
+                                    },
+                                    decoration: InputDecoration(
+                                      border: InputBorder.none,
+                                      hintText: 'Odaberite radnika',
                                       hintStyle: TextStyle(
                                         color: Colors.grey.shade400,
                                       ),
