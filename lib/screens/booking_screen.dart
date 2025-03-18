@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_datetime_picker_plus/flutter_datetime_picker_plus.dart'
-    as picker;
+import 'package:flutter_datetime_picker_plus/flutter_datetime_picker_plus.dart' as picker;
 import 'AppointmentsScreen.dart';
 
 class BookingScreen extends StatefulWidget {
@@ -20,29 +19,47 @@ class _BookingScreenState extends State<BookingScreen> {
   double? _selectedPrice;
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
-  List<Map<String, dynamic>> _services = []; // List to store fetched services
-  List<String> _workers = []; // List to store fetched workers
-  bool _isLoading = true; // Loading state
-  String? _selectedWorker; // Selected worker
+  List<Map<String, dynamic>> _services = [];
+  List<String> _workers = [];
+  bool _isLoading = true;
+  String? _selectedWorker;
+  late List<String> _workingDays;
+  late String _workingHours;
 
   @override
   void initState() {
     super.initState();
-    _fetchServices(); // Fetch services when the screen loads
-    _fetchWorkers(); // Fetch workers when the screen loads
+    _fetchSalonDetails();
+    _fetchServices();
+    _fetchWorkers();
   }
 
-  // Fetch services from Firestore
+  void _fetchSalonDetails() async {
+    try {
+      DocumentSnapshot salonSnapshot = await FirebaseFirestore.instance
+          .collection('saloni')
+          .doc(widget.idSalona)
+          .get();
+
+      if (salonSnapshot.exists) {
+        setState(() {
+          _workingDays = List<String>.from(salonSnapshot['workingDays'] ?? []);
+          _workingHours = salonSnapshot['workingHours'] ?? '10:00 AM - 6:00 PM';
+        });
+      }
+    } catch (e) {
+      print('Error fetching salon details: $e');
+    }
+  }
+
   void _fetchServices() async {
     try {
-      QuerySnapshot querySnapshot =
-          await FirebaseFirestore.instance
-              .collection('saloni')
-              .doc(widget.idSalona)
-              .collection('haircuts')
-              .get();
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('saloni')
+          .doc(widget.idSalona)
+          .collection('haircuts')
+          .get();
 
-      // Use a Set to filter out duplicates
       Set<String> uniqueTypes = {};
       List<Map<String, dynamic>> uniqueServices = [];
 
@@ -56,24 +73,22 @@ class _BookingScreenState extends State<BookingScreen> {
 
       setState(() {
         _services = uniqueServices;
-        _isLoading = false; // Stop loading
+        _isLoading = false;
       });
     } catch (e) {
       print('Error fetching services: $e');
       setState(() {
-        _isLoading = false; // Stop loading even if there's an error
+        _isLoading = false;
       });
     }
   }
 
-  // Fetch workers from Firestore
   void _fetchWorkers() async {
     try {
-      DocumentSnapshot salonSnapshot =
-          await FirebaseFirestore.instance
-              .collection('saloni')
-              .doc(widget.idSalona)
-              .get();
+      DocumentSnapshot salonSnapshot = await FirebaseFirestore.instance
+          .collection('saloni')
+          .doc(widget.idSalona)
+          .get();
 
       if (salonSnapshot.exists) {
         List<dynamic> workers = salonSnapshot['radnici'] ?? [];
@@ -113,6 +128,24 @@ class _BookingScreenState extends State<BookingScreen> {
     String formattedDate = DateFormat('dd.MM.yyyy').format(_selectedDate!);
     String formattedTime = _selectedTime!.format(context);
 
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('termini')
+        .where('salonId', isEqualTo: widget.idSalona)
+        .where('datum', isEqualTo: formattedDate)
+        .where('vrijeme', isEqualTo: formattedTime)
+        .where('worker', isEqualTo: _selectedWorker)
+        .get();
+
+    if (querySnapshot.docs.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Termin je već zauzet!'),
+          backgroundColor: Color(0xFF26A69A),
+        ),
+      );
+      return;
+    }
+
     await FirebaseFirestore.instance.collection('termini').add({
       'ime': _nameController.text,
       'usluga': _selectedService,
@@ -121,7 +154,7 @@ class _BookingScreenState extends State<BookingScreen> {
       'vrijeme': formattedTime,
       'timestamp': FieldValue.serverTimestamp(),
       'salonId': widget.idSalona,
-      'worker': _selectedWorker, // Save the selected worker
+      'worker': _selectedWorker,
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -149,20 +182,20 @@ class _BookingScreenState extends State<BookingScreen> {
       maxTime: DateTime.now().add(const Duration(days: 30)),
       onChanged: (date) {},
       onConfirm: (date) {
-        // Check if weekend (6 = Saturday, 7 = Sunday)
-        if (date.weekday == 6 || date.weekday == 7) {
+        String selectedDay = DateFormat('EEEE').format(date);
+        if (!_workingDays.contains(selectedDay)) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Možete zakazati samo od ponedjeljka do petka!'),
+              content: Text('Salon ne radi na odabrani dan!'),
               backgroundColor: Color(0xFF26A69A),
             ),
           );
           return;
         }
+
         setState(() {
           _selectedDate = date;
         });
-        // After selecting date, show time picker
         _showTimePicker();
       },
       currentTime: DateTime.now(),
@@ -185,18 +218,21 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  void _showTimePicker() {
-    // Business hours from 9:00 to 17:00
+  void _showTimePicker() async {
+    List<String> hours = _workingHours.split(' - ');
+    TimeOfDay startTime = _parseTime(hours[0]);
+    TimeOfDay endTime = _parseTime(hours[1]);
+
     List<String> timeSlots = [];
-    // Generate time slots for each hour and half hour
-    for (int hour = 9; hour < 17; hour++) {
-      // Add the on-the-hour slot (e.g., 9:00)
-      timeSlots.add('${hour.toString().padLeft(2, '0')}:00');
-      // Add the half-hour slot (e.g., 9:30) if not the last hour
-      if (hour < 16) {
-        timeSlots.add('${hour.toString().padLeft(2, '0')}:30');
-      }
+    TimeOfDay currentTime = startTime;
+
+    while (currentTime.hour < endTime.hour ||
+        (currentTime.hour == endTime.hour && currentTime.minute < endTime.minute)) {
+      timeSlots.add(_formatTime(currentTime));
+      currentTime = _addMinutes(currentTime, 30);
     }
+
+    List<String> bookedSlots = await _fetchBookedSlots();
 
     showModalBottomSheet(
       context: context,
@@ -239,21 +275,22 @@ class _BookingScreenState extends State<BookingScreen> {
                   ),
                   itemCount: timeSlots.length,
                   itemBuilder: (context, index) {
+                    bool isBooked = bookedSlots.contains(timeSlots[index]);
                     return ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey.shade100,
-                        foregroundColor: const Color(0xFF26A69A),
+                        backgroundColor: isBooked ? Colors.grey : Colors.grey.shade100,
+                        foregroundColor: isBooked ? Colors.white : const Color(0xFF26A69A),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                         elevation: 0,
                       ),
-                      onPressed: () {
-                        // Parse the time string
+                      onPressed: isBooked
+                          ? null
+                          : () {
                         List<String> parts = timeSlots[index].split(':');
                         int hour = int.parse(parts[0]);
-                        int minute = int.parse(parts[1]);
-                        // Set the selected time and close the modal
+                        int minute = int.parse(parts[1].split(' ')[0]);
                         setState(() {
                           _selectedTime = TimeOfDay(hour: hour, minute: minute);
                         });
@@ -274,16 +311,54 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
+  Future<List<String>> _fetchBookedSlots() async {
+    if (_selectedDate == null || _selectedWorker == null) return [];
+
+    String formattedDate = DateFormat('dd.MM.yyyy').format(_selectedDate!);
+
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('termini')
+        .where('salonId', isEqualTo: widget.idSalona)
+        .where('datum', isEqualTo: formattedDate)
+        .where('worker', isEqualTo: _selectedWorker)
+        .get();
+
+    List<String> bookedSlots = [];
+    for (var doc in querySnapshot.docs) {
+      bookedSlots.add(doc['vrijeme']);
+    }
+
+    return bookedSlots;
+  }
+
+  TimeOfDay _parseTime(String time) {
+    final format = DateFormat('h:mm a');
+    DateTime dateTime = format.parse(time);
+    return TimeOfDay.fromDateTime(dateTime);
+  }
+
+  String _formatTime(TimeOfDay time) {
+    final now = DateTime.now();
+    final dt = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+    final format = DateFormat('h:mm a');
+    return format.format(dt);
+  }
+
+  TimeOfDay _addMinutes(TimeOfDay time, int minutes) {
+    int totalMinutes = time.hour * 60 + time.minute + minutes;
+    return TimeOfDay(hour: totalMinutes ~/ 60, minute: totalMinutes % 60);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Zakazivanje termina'),
-        backgroundColor: const Color(0xFF26A69A), // Teal color
+        backgroundColor: const Color(0xFF26A69A),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
-            Navigator.pop(context); // Navigate back
+            Navigator.pop(context);
           },
         ),
       ),
@@ -293,8 +368,8 @@ class _BookingScreenState extends State<BookingScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF26A69A), // Teal
-              Color(0xFF80CBC4), // Lighter teal
+              Color(0xFF26A69A),
+              Color(0xFF80CBC4),
             ],
           ),
         ),
@@ -316,7 +391,6 @@ class _BookingScreenState extends State<BookingScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 10),
-                        // Name field
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.grey.shade100,
@@ -351,7 +425,6 @@ class _BookingScreenState extends State<BookingScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        // Service dropdown
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.grey.shade100,
@@ -374,56 +447,45 @@ class _BookingScreenState extends State<BookingScreen> {
                               ),
                               _isLoading
                                   ? const Center(
-                                    child: CircularProgressIndicator(),
-                                  )
+                                child: CircularProgressIndicator(),
+                              )
                                   : _services.isEmpty
                                   ? const Text('Nema dostupnih usluga')
                                   : DropdownButtonFormField(
-                                    value: _selectedService,
-                                    items:
-                                        _services.map((service) {
-                                          return DropdownMenuItem(
-                                            value: service['type'],
-                                            child: Text(service['type']),
-                                          );
-                                        }).toList(),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _selectedService = value as String?;
-                                        // Find the selected service and update the price
-                                        var selectedService = _services
-                                            .firstWhere(
-                                              (service) =>
-                                                  service['type'] == value,
-                                              orElse:
-                                                  () => {
-                                                    'type': '',
-                                                    'price': 0.0,
-                                                  },
-                                            );
-                                        _selectedPrice = double.parse(
-                                          selectedService['price'].toString(),
-                                        );
-                                      });
-                                    },
-                                    decoration: InputDecoration(
-                                      border: InputBorder.none,
-                                      hintText: 'Odaberite uslugu',
-                                      hintStyle: TextStyle(
-                                        color: Colors.grey.shade400,
-                                      ),
-                                    ),
-                                    icon: const Icon(
-                                      Icons.arrow_drop_down,
-                                      color: Color(0xFF26A69A),
-                                    ),
-                                    dropdownColor: Colors.white,
+                                value: _selectedService,
+                                items: _services.map((service) {
+                                  return DropdownMenuItem(
+                                    value: service['type'],
+                                    child: Text(service['type']),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedService = value as String?;
+                                    var selectedService = _services.firstWhere(
+                                          (service) => service['type'] == value,
+                                      orElse: () => {'type': '', 'price': 0.0},
+                                    );
+                                    _selectedPrice = double.parse(selectedService['price'].toString());
+                                  });
+                                },
+                                decoration: InputDecoration(
+                                  border: InputBorder.none,
+                                  hintText: 'Odaberite uslugu',
+                                  hintStyle: TextStyle(
+                                    color: Colors.grey.shade400,
                                   ),
+                                ),
+                                icon: const Icon(
+                                  Icons.arrow_drop_down,
+                                  color: Color(0xFF26A69A),
+                                ),
+                                dropdownColor: Colors.white,
+                              ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 20),
-                        // Worker dropdown
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.grey.shade100,
@@ -447,36 +509,34 @@ class _BookingScreenState extends State<BookingScreen> {
                               _workers.isEmpty
                                   ? const Text('Nema dostupnih radnika')
                                   : DropdownButtonFormField(
-                                    value: _selectedWorker,
-                                    items:
-                                        _workers.map((worker) {
-                                          return DropdownMenuItem(
-                                            value: worker,
-                                            child: Text(worker),
-                                          );
-                                        }).toList(),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _selectedWorker = value as String?;
-                                      });
-                                    },
-                                    decoration: InputDecoration(
-                                      border: InputBorder.none,
-                                      hintText: 'Odaberite radnika',
-                                      hintStyle: TextStyle(
-                                        color: Colors.grey.shade400,
-                                      ),
-                                    ),
-                                    icon: const Icon(
-                                      Icons.arrow_drop_down,
-                                      color: Color(0xFF26A69A),
-                                    ),
-                                    dropdownColor: Colors.white,
+                                value: _selectedWorker,
+                                items: _workers.map((worker) {
+                                  return DropdownMenuItem(
+                                    value: worker,
+                                    child: Text(worker),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedWorker = value as String?;
+                                  });
+                                },
+                                decoration: InputDecoration(
+                                  border: InputBorder.none,
+                                  hintText: 'Odaberite radnika',
+                                  hintStyle: TextStyle(
+                                    color: Colors.grey.shade400,
                                   ),
+                                ),
+                                icon: const Icon(
+                                  Icons.arrow_drop_down,
+                                  color: Color(0xFF26A69A),
+                                ),
+                                dropdownColor: Colors.white,
+                              ),
                             ],
                           ),
                         ),
-                        // Price display
                         if (_selectedPrice != null)
                           Container(
                             margin: const EdgeInsets.only(top: 20),
@@ -507,7 +567,6 @@ class _BookingScreenState extends State<BookingScreen> {
                             ),
                           ),
                         const SizedBox(height: 20),
-                        // Date and time selector - combined into one button
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.grey.shade100,
@@ -516,16 +575,12 @@ class _BookingScreenState extends State<BookingScreen> {
                           child: ElevatedButton(
                             onPressed: _pickDateTime,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  (_selectedDate != null &&
-                                          _selectedTime != null)
-                                      ? const Color(0xFF26A69A)
-                                      : Colors.grey.shade100,
-                              foregroundColor:
-                                  (_selectedDate != null &&
-                                          _selectedTime != null)
-                                      ? Colors.white
-                                      : Colors.black87,
+                              backgroundColor: (_selectedDate != null && _selectedTime != null)
+                                  ? const Color(0xFF26A69A)
+                                  : Colors.grey.shade100,
+                              foregroundColor: (_selectedDate != null && _selectedTime != null)
+                                  ? Colors.white
+                                  : Colors.black87,
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 15),
                               shape: RoundedRectangleBorder(
@@ -538,8 +593,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                 const Icon(Icons.calendar_today, size: 20),
                                 const SizedBox(width: 8),
                                 Text(
-                                  (_selectedDate == null ||
-                                          _selectedTime == null)
+                                  (_selectedDate == null || _selectedTime == null)
                                       ? 'Odaberite datum i vrijeme'
                                       : '${DateFormat('dd.MM.yyyy').format(_selectedDate!)} - ${_selectedTime!.format(context)}',
                                   style: const TextStyle(fontSize: 16),
@@ -549,7 +603,6 @@ class _BookingScreenState extends State<BookingScreen> {
                           ),
                         ),
                         const SizedBox(height: 40),
-                        // Confirm button
                         SizedBox(
                           width: double.infinity,
                           height: 50,
@@ -573,16 +626,11 @@ class _BookingScreenState extends State<BookingScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        // View appointments button
                         SizedBox(
                           width: double.infinity,
                           height: 50,
                           child: OutlinedButton(
-                            onPressed:
-                                () => _navigateToAppointments(
-                                  context,
-                                  widget.idSalona ?? "",
-                                ),
+                            onPressed: () => _navigateToAppointments(context, widget.idSalona ?? ""),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF26A69A),
                               side: const BorderSide(color: Color(0xFF26A69A)),
