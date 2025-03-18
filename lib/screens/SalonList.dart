@@ -15,14 +15,25 @@ class _SalonListScreenState extends State<SalonListScreen> {
   List<String> _favoritedSalons = []; // Track favorited salons
   int _selectedTabIndex = 0; // 0: Following, 1: Popular, 2: Recent
 
-  void _toggleFavorite(String salonId) {
-    setState(() {
-      if (_favoritedSalons.contains(salonId)) {
+  // Function to toggle favorite and update Firestore
+  Future<void> _toggleFavorite(String salonId) async {
+    final salonRef = FirebaseFirestore.instance
+        .collection('saloni')
+        .doc(salonId);
+
+    if (_favoritedSalons.contains(salonId)) {
+      // Unfavorite: Decrement the favorite count
+      await salonRef.update({'favorites': FieldValue.increment(-1)});
+      setState(() {
         _favoritedSalons.remove(salonId);
-      } else {
+      });
+    } else {
+      // Favorite: Increment the favorite count
+      await salonRef.update({'favorites': FieldValue.increment(1)});
+      setState(() {
         _favoritedSalons.add(salonId);
-      }
-    });
+      });
+    }
   }
 
   void _onTabSelected(int index) {
@@ -203,6 +214,17 @@ class _SalonListScreenState extends State<SalonListScreen> {
                       return true;
                     }).toList();
 
+                // Sort salons by favorites (for Popular tab)
+                if (_selectedTabIndex == 1) {
+                  filteredSalons.sort((a, b) {
+                    int aFavorites =
+                        (a.data() as Map<String, dynamic>)['favorites'] ?? 0;
+                    int bFavorites =
+                        (b.data() as Map<String, dynamic>)['favorites'] ?? 0;
+                    return bFavorites.compareTo(aFavorites); // Descending order
+                  });
+                }
+
                 return ListView.builder(
                   itemCount: filteredSalons.length,
                   itemBuilder: (context, index) {
@@ -213,6 +235,8 @@ class _SalonListScreenState extends State<SalonListScreen> {
                     String adresa = salon['adresa'] ?? 'Bez adrese';
                     String brojTelefona = salon['brojTelefona'] ?? 'Nema broja';
                     String? logoUrl = salon['logoUrl']; // Get logo URL
+                    int favorites =
+                        salon['favorites'] ?? 0; // Get favorite count
 
                     return Card(
                       margin: const EdgeInsets.symmetric(
@@ -291,6 +315,14 @@ class _SalonListScreenState extends State<SalonListScreen> {
                                     const SizedBox(height: 4),
                                     Text(
                                       brojTelefona,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Favorites: $favorites', // Display favorite count
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: Colors.grey[700],
