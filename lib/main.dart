@@ -10,7 +10,15 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    // Initialize Firebase
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print('Firebase initialized successfully'); // Debug log
+  } catch (e) {
+    print('Error initializing Firebase: $e'); // Debug log
+  }
   runApp(const MyApp());
 }
 
@@ -38,6 +46,7 @@ final GoRouter router = GoRouter(
       path: '/',
       builder: (context, state) {
         final user = FirebaseAuth.instance.currentUser;
+        print('User: $user'); // Debug log
         // Redirect to LoginScreen if user is not logged in, otherwise to HomeScreen
         return user == null ? LoginScreen() : HomeScreen();
       },

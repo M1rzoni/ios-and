@@ -12,6 +12,24 @@ class SalonListScreen extends StatefulWidget {
 class _SalonListScreenState extends State<SalonListScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  List<String> _favoritedSalons = []; // Track favorited salons
+  int _selectedTabIndex = 0; // 0: Following, 1: Popular, 2: Recent
+
+  void _toggleFavorite(String salonId) {
+    setState(() {
+      if (_favoritedSalons.contains(salonId)) {
+        _favoritedSalons.remove(salonId);
+      } else {
+        _favoritedSalons.add(salonId);
+      }
+    });
+  }
+
+  void _onTabSelected(int index) {
+    setState(() {
+      _selectedTabIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,36 +113,45 @@ class _SalonListScreenState extends State<SalonListScreen> {
               children: [
                 TextButton(
                   onPressed: () {
-                    // Handle "Following" tab
+                    _onTabSelected(0);
                   },
-                  child: const Text(
+                  child: Text(
                     'Following',
                     style: TextStyle(
-                      color: Colors.white,
+                      color:
+                          _selectedTabIndex == 0
+                              ? Colors.white
+                              : Colors.white.withOpacity(0.6),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 TextButton(
                   onPressed: () {
-                    // Handle "Popular" tab
+                    _onTabSelected(1);
                   },
-                  child: const Text(
+                  child: Text(
                     'Popular',
                     style: TextStyle(
-                      color: Colors.white,
+                      color:
+                          _selectedTabIndex == 1
+                              ? Colors.white
+                              : Colors.white.withOpacity(0.6),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 TextButton(
                   onPressed: () {
-                    // Handle "Recent" tab
+                    _onTabSelected(2);
                   },
-                  child: const Text(
+                  child: Text(
                     'Recent',
                     style: TextStyle(
-                      color: Colors.white,
+                      color:
+                          _selectedTabIndex == 2
+                              ? Colors.white
+                              : Colors.white.withOpacity(0.6),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -155,14 +182,25 @@ class _SalonListScreenState extends State<SalonListScreen> {
 
                 var salons = snapshot.data!.docs;
 
-                // Filter salons based on search query
+                // Filter salons based on search query and selected tab
                 var filteredSalons =
                     salons.where((salon) {
                       var salonData = salon.data() as Map<String, dynamic>;
                       String naziv = salonData['naziv'] ?? '';
-                      return naziv.toLowerCase().contains(
-                        _searchQuery.toLowerCase(),
-                      );
+
+                      if (_searchQuery.isNotEmpty &&
+                          !naziv.toLowerCase().contains(
+                            _searchQuery.toLowerCase(),
+                          )) {
+                        return false;
+                      }
+
+                      if (_selectedTabIndex == 2 &&
+                          !_favoritedSalons.contains(salon.id)) {
+                        return false;
+                      }
+
+                      return true;
                     }).toList();
 
                 return ListView.builder(
@@ -174,6 +212,7 @@ class _SalonListScreenState extends State<SalonListScreen> {
                     String naziv = salon['naziv'] ?? 'Nepoznat salon';
                     String adresa = salon['adresa'] ?? 'Bez adrese';
                     String brojTelefona = salon['brojTelefona'] ?? 'Nema broja';
+                    String? logoUrl = salon['logoUrl']; // Get logo URL
 
                     return Card(
                       margin: const EdgeInsets.symmetric(
@@ -200,7 +239,7 @@ class _SalonListScreenState extends State<SalonListScreen> {
                           padding: const EdgeInsets.all(16.0),
                           child: Row(
                             children: [
-                              // Salon Icon
+                              // Salon Logo
                               Container(
                                 width: 60,
                                 height: 60,
@@ -210,11 +249,22 @@ class _SalonListScreenState extends State<SalonListScreen> {
                                   ).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(15),
                                 ),
-                                child: const Icon(
-                                  Icons.store,
-                                  color: Color(0xFF26A69A),
-                                  size: 30,
-                                ),
+                                child:
+                                    logoUrl != null
+                                        ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            15,
+                                          ),
+                                          child: Image.network(
+                                            logoUrl,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        )
+                                        : const Icon(
+                                          Icons.store,
+                                          color: Color(0xFF26A69A),
+                                          size: 30,
+                                        ),
                               ),
                               const SizedBox(width: 16),
                               // Salon Details
@@ -249,10 +299,20 @@ class _SalonListScreenState extends State<SalonListScreen> {
                                   ],
                                 ),
                               ),
-                              const Icon(
-                                Icons.arrow_forward_ios,
-                                color: Color(0xFF26A69A),
-                                size: 20,
+                              // Heart Icon for Favoriting
+                              IconButton(
+                                icon: Icon(
+                                  _favoritedSalons.contains(idSalona)
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color:
+                                      _favoritedSalons.contains(idSalona)
+                                          ? Colors.red
+                                          : Colors.grey,
+                                ),
+                                onPressed: () {
+                                  _toggleFavorite(idSalona);
+                                },
                               ),
                             ],
                           ),
