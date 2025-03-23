@@ -101,14 +101,6 @@ class _BookingScreenState extends State<BookingScreen> {
     }
   }
 
-  void _navigateToAppointments(BuildContext context, String idSalona) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AppointmentsScreen(idSalona: idSalona),
-      ),
-    );
-  }
 
   void _saveBooking() async {
     if (_nameController.text.isEmpty ||
@@ -626,31 +618,6 @@ class _BookingScreenState extends State<BookingScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: OutlinedButton(
-                            onPressed: () => _navigateToAppointments(context, widget.idSalona ?? ""),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF26A69A),
-                              side: const BorderSide(color: Color(0xFF26A69A)),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.calendar_month),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Prikaži rezervisane termine',
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),

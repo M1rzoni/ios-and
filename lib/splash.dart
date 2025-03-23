@@ -1,56 +1,37 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lottie/lottie.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';  // Moderni fontovi
+import 'package:lottie/lottie.dart';  // Animirana pozadina
 
 class Splash extends StatefulWidget {
   const Splash({super.key});
+
   @override
   _SplashState createState() => _SplashState();
 }
 
-class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeInAnimation;
-  late Animation<double> _scaleAnimation;
-
+class _SplashState extends State<Splash> {
   @override
   void initState() {
     super.initState();
 
-    // Set the status bar to transparent
+    // Postavljanje status bara na providan
     SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
+      const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
       ),
     );
 
-    // Set the app to fullscreen mode
+    // Fullscreen mod
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-    // Initialize animation controller
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    );
-
-    // Fade-in animation
-    _fadeInAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-
-    // Scale animation for the logo
-    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
-    );
-
-    _animationController.forward();
-
-    // Timer for navigation
-    Timer(const Duration(seconds: 4), () {
+    // Timer za navigaciju
+    Timer(const Duration(seconds: 3), () {
       if (mounted) {
         final user = FirebaseAuth.instance.currentUser;
         context.go(user == null ? '/login' : '/');
@@ -59,104 +40,93 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
   }
 
   @override
-  void dispose() {
-    // Restore system UI settings after splash screen
-    SystemChrome.setEnabledSystemUIMode(
-      SystemUiMode.manual,
-      overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
-    );
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Extend the body behind the app bar
       extendBodyBehindAppBar: true,
-      extendBody: true,
-      body: Container(
-        // Make the container take up the entire screen
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF26A69A), // Teal
-              Color(0xFF80CBC4), // Lighter teal
-            ],
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Animirana pozadina
+          Lottie.asset(
+            'assets/lottie/animation2.json',  // Postavi putanju do Lottie fajla
+            fit: BoxFit.cover,
           ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Spacer(flex: 2),
-            // App title with fade and scale animation
-            ScaleTransition(
-              scale: _scaleAnimation,
-              child: FadeTransition(
-                opacity: _fadeInAnimation,
-                child: Text(
-                  "FrizzyFlow",
-                  style: TextStyle(
-                    fontSize: 42, // Increased font size
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 15.0,
-                        color: Colors.black.withOpacity(0.5),
-                        offset: Offset(0, 4),
+
+          // Tamni overlay za bolji kontrast
+          Container(
+            color: Colors.black.withOpacity(0.4),
+          ),
+
+          // Efekat zamagljenog stakla
+          Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  width: 320,
+                  padding: const EdgeInsets.all(25),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withOpacity(0.3)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.25),
+                        blurRadius: 20,
+                        spreadRadius: 3,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Ikona ili logo
+                      /*Icon(
+                        Icons.scissors,
+                        size: 70,
+                        color: Colors.white.withOpacity(0.9),
+                      ),*/
+                      const SizedBox(height: 15),
+
+                      // Naslov aplikacije
+                      Text(
+                        "SalonTime",
+                        style: GoogleFonts.roboto(
+                          fontSize: 36,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 10,
+                              color: Colors.black.withOpacity(0.3),
+                              offset: Offset(2, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Slogan
+                      Text(
+                        "Brže do savršenog izgleda",
+                        style: GoogleFonts.montserrat(
+                          fontSize: 18,
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                      ),
+                      const SizedBox(height: 50),  // Povećano sa 30 na 50
+
+                      // Loading indikator
+                      CircularProgressIndicator(
+                        color: Colors.white.withOpacity(0.8),
                       ),
                     ],
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 30),
-            // Lottie animation with fade and scale animation
-            ScaleTransition(
-              scale: _scaleAnimation,
-              child: FadeTransition(
-                opacity: _fadeInAnimation,
-                child: SizedBox(
-                  width: 300, // Increased size for better visibility
-                  height: 300,
-                  child: Lottie.asset(
-                    "assets/lottie/animation.json",
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-            ),
-            const Spacer(flex: 1),
-            // Additional text at the bottom with fade animation
-            FadeTransition(
-              opacity: _fadeInAnimation,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 40),
-                child: Text(
-                  "Cutting Edge Style",
-                  style: TextStyle(
-                    fontSize: 20, // Increased font size
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white.withOpacity(0.9),
-                    shadows: [
-                      Shadow(
-                        blurRadius: 10.0,
-                        color: Colors.black.withOpacity(0.3),
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const Spacer(flex: 2),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

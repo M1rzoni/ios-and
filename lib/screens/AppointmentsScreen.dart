@@ -7,10 +7,10 @@ class AppointmentsScreen extends StatelessWidget {
   final bool isOwner; // Add this to check if the user is an owner
 
   const AppointmentsScreen({
-    super.key,
-    required this.idSalona,
-    this.isOwner = false, // Default to false
-  });
+    Key? key,
+    required this.idSalona, // Obavezan imenovani parametar
+    required this.isOwner,  // Obavezan imenovani parametar
+  }) : super(key: key);
 
   void _deleteAppointment(String docId, BuildContext context) async {
     await FirebaseFirestore.instance.collection('termini').doc(docId).delete();
