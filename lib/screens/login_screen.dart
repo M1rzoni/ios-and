@@ -3,9 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:frizerski_salon/screens/AppointmentsScreen.dart';
 import 'package:frizerski_salon/screens/SalonCreationScreen.dart';
 import 'package:frizerski_salon/screens/SalonList.dart';
-import 'package:frizerski_salon/screens/SalonListAdmin.dart';
 import 'AuthService.dart';
-import 'booking_screen.dart';
 import 'RegisterScreen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -20,10 +18,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   String errorMessage = "";
   bool rememberMe = false;
-  bool _obscurePassword =
-      true; // Add this variable to toggle password visibility
+  bool _obscurePassword = true;
 
-  // Function to handle forgot password
   Future<void> _forgotPassword(BuildContext context) async {
     final String email = _emailController.text.trim();
 
@@ -36,7 +32,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Password reset email sent. Check your inbox.'),
@@ -50,20 +45,17 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Function to navigate to AppointmentsScreen
   void _navigateToAppointments(
     BuildContext context,
     String idSalona,
-    bool isOwner, // Pass the isOwner parameter
+    bool isOwner,
   ) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder:
-            (context) => AppointmentsScreen(
-              idSalona: idSalona,
-              isOwner: isOwner, // Pass the isOwner value
-            ),
+            (context) =>
+                AppointmentsScreen(idSalona: idSalona, isOwner: isOwner),
       ),
     );
   }
@@ -76,10 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF26A69A), // Teal
-              Color(0xFF80CBC4), // Lighter teal
-            ],
+            colors: [Color(0xFF26A69A), Color(0xFF80CBC4)],
           ),
         ),
         child: SafeArea(
@@ -92,7 +81,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 40),
-                    // Login Title
                     const Text(
                       'Login',
                       style: TextStyle(
@@ -102,7 +90,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 40),
-                    // Username/Email Field
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
@@ -138,7 +125,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    // Password Field
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
@@ -181,21 +167,17 @@ class _LoginScreenState extends State<LoginScreen> {
                                 },
                               ),
                             ),
-                            obscureText:
-                                _obscurePassword, // Toggle password visibility
+                            obscureText: _obscurePassword,
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 10),
-                    // Forgot Password
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () {
-                          _forgotPassword(
-                            context,
-                          ); // Call the forgot password function
+                          _forgotPassword(context);
                         },
                         child: Text(
                           'Forgot Password?',
@@ -207,7 +189,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    // Remember Me Checkbox and Sign In Button
                     Row(
                       children: [
                         Checkbox(
@@ -218,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             });
                           },
                           checkColor: Color(0xFF26A69A),
-                          fillColor: MaterialStateProperty.resolveWith(
+                          fillColor: WidgetStateProperty.resolveWith(
                             (states) => Colors.white,
                           ),
                         ),
@@ -230,16 +211,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         Spacer(),
-                        // Sign In Button
-                        Container(
+                        SizedBox(
                           height: 40,
                           width: 100,
                           child: ElevatedButton(
                             onPressed: () async {
-                              // Check if the entered credentials are "admin"
                               if (_emailController.text == 'admin' &&
                                   _passwordController.text == 'admin') {
-                                // Navigate to the SalonCreationScreen
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -249,38 +227,61 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 );
                               } else {
-                                // Proceed with Firebase Authentication for regular users
                                 User? user = await _authService
                                     .signInWithEmailAndPassword(
                                       _emailController.text,
                                       _passwordController.text,
                                     );
                                 if (user != null) {
-                                  // Dohvati korisničke podatke iz Firestore
-                                  Map<String, dynamic>? userData =
-                                      await _authService.getUserData(user.uid);
-                                  if (userData != null &&
-                                      userData['salonId'] != "") {
-                                    bool isOwner =
-                                        userData['salonId'] != null &&
-                                        userData['salonId'] != "";
-                                    print(
-                                      'User is owner: $isOwner',
-                                    ); // Debugging
-                                    _navigateToAppointments(
-                                      context,
-                                      userData['salonId'] ??
-                                          "", // Pass salonId (empty if not an owner)
-                                      isOwner, // Pass the isOwner value
-                                    );
+                                  if (user.emailVerified) {
+                                    Map<String, dynamic>? userData =
+                                        await _authService.getUserData(
+                                          user.uid,
+                                        );
+                                    if (userData != null &&
+                                        userData['salonId'] != "") {
+                                      bool isOwner =
+                                          userData['salonId'] != null &&
+                                          userData['salonId'] != "";
+                                      _navigateToAppointments(
+                                        context,
+                                        userData['salonId'] ?? "",
+                                        isOwner,
+                                      );
+                                    } else {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (context) =>
+                                                  const SalonListScreen(),
+                                        ),
+                                      );
+                                    }
                                   } else {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (context) =>
-                                                const SalonListScreen(),
-                                      ),
+                                    setState(() {
+                                      errorMessage =
+                                          "Molimo vas da verifikujte svoj email pre prijave.";
+                                    });
+                                    await user.sendEmailVerification();
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) {
+                                        return AlertDialog(
+                                          title: Text('Verifikacija emaila'),
+                                          content: Text(
+                                            'Poslali smo vam email za verifikaciju. Molimo vas da proverite svoj inbox i verifikujte email pre nego što se prijavite.',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () {
+                                                Navigator.pop(context);
+                                              },
+                                              child: Text('OK'),
+                                            ),
+                                          ],
+                                        );
+                                      },
                                     );
                                   }
                                 } else {
@@ -303,7 +304,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                     const SizedBox(height: 30),
-                    // Registration Link
                     Center(
                       child: TextButton(
                         onPressed: () {
@@ -335,11 +335,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    // Social Login Buttons
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Google Button
                         Container(
                           width: 44,
                           height: 44,
@@ -365,7 +363,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(width: 20),
-                        // Apple Button
                         Container(
                           width: 44,
                           height: 44,
