@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:frizerski_salon/cities_list.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
@@ -46,6 +47,9 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
 
   XFile? _pickedImage; // Use XFile instead of File for web compatibility
   final ImagePicker _picker = ImagePicker();
+
+  // Selected city
+  String? _selectedCity;
 
   Future<void> _pickImage() async {
     try {
@@ -122,6 +126,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
       _workersController.text =
           (widget.initialData['radnici'] as List<dynamic>?)?.join(', ') ?? '';
       _vlasnikController.text = widget.initialData['vlasnik'] ?? '';
+      _selectedCity = widget.initialData['grad'] ?? '';
 
       // Handle working days
       if (widget.initialData['workingDays'] != null) {
@@ -165,6 +170,26 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
           _closingTime = picked;
         }
       });
+    }
+  }
+
+  // Function to find user by email
+  Future<String?> _findUserByEmail(String email) async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        return querySnapshot.docs.first.id; // Return user ID
+      } else {
+        return null; // User not found
+      }
+    } catch (e) {
+      print('Error finding user by email: $e');
+      return null;
     }
   }
 
@@ -239,49 +264,44 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child:
-                            _pickedImage != null
-                                ? kIsWeb
-                                    ? FutureBuilder<Uint8List>(
-                                      future: _pickedImage!.readAsBytes(),
-                                      builder: (context, snapshot) {
-                                        if (snapshot.connectionState ==
-                                            ConnectionState.waiting) {
-                                          return CircularProgressIndicator();
-                                        } else if (snapshot.hasError) {
-                                          return Icon(
-                                            Icons.error,
-                                            color: Colors.red,
-                                            size: 40,
-                                          );
-                                        } else if (snapshot.hasData) {
-                                          return Image.memory(
-                                            snapshot.data!,
-                                            fit: BoxFit.cover,
-                                          );
-                                        } else {
-                                          return Icon(
-                                            Icons
-                                                .add_a_photo, // Corrected: Use `Icons`
-                                            color: Colors.white.withOpacity(
-                                              0.5,
-                                            ),
-                                            size: 40, // Added size parameter
-                                          );
-                                        }
-                                      },
-                                    )
-                                    : Image.file(
-                                      File(_pickedImage!.path),
-                                    ) // For mobile
-                                : Icon(
-                                  Icons.add_a_photo, // Corrected: Use `Icons`
-                                  color: Colors.white.withOpacity(0.5),
-                                  size: 40, // Added size parameter
-                                ),
+                        child: _pickedImage != null
+                            ? kIsWeb
+                            ? FutureBuilder<Uint8List>(
+                          future: _pickedImage!.readAsBytes(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return CircularProgressIndicator();
+                            } else if (snapshot.hasError) {
+                              return Icon(
+                                Icons.error,
+                                color: Colors.red,
+                                size: 40,
+                              );
+                            } else if (snapshot.hasData) {
+                              return Image.memory(
+                                snapshot.data!,
+                                fit: BoxFit.cover,
+                              );
+                            } else {
+                              return Icon(
+                                Icons.add_a_photo,
+                                color: Colors.white.withOpacity(0.5),
+                                size: 40,
+                              );
+                            }
+                          },
+                        )
+                            : Image.file(
+                          File(_pickedImage!.path),
+                        ) // For mobile
+                            : Icon(
+                          Icons.add_a_photo,
+                          color: Colors.white.withOpacity(0.5),
+                          size: 40,
+                        ),
                       ),
                     ),
-
                     const SizedBox(height: 20),
                     // Salon Name Field
                     Container(
@@ -437,7 +457,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Vlasnik',
+                            'Vlasnik (Email)',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 14,
@@ -448,11 +468,59 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: 'Enter vlasnik',
+                              hintText: 'Enter vlasnik email',
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
                             ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Grad Field
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 5,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Grad',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 14,
+                            ),
+                          ),
+                          DropdownButtonFormField<String>(
+                            value: _selectedCity,
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              hintText: 'Izaberi grad',
+                              hintStyle: TextStyle(
+                                color: Colors.white.withOpacity(0.5),
+                              ),
+                            ),
+                            items: CitiesList.cities.map((String city) {
+                              return DropdownMenuItem<String>(
+                                value: city,
+                                child: Text(
+                                  city,
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                _selectedCity = newValue;
+                              });
+                            },
                           ),
                         ],
                       ),
@@ -479,24 +547,21 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                             ),
                           ),
                           Wrap(
-                            children:
-                                _daysOfWeek.map((day) {
-                                  return FilterChip(
-                                    label: Text(day),
-                                    selected: _selectedWorkingDays.contains(
-                                      day,
-                                    ),
-                                    onSelected: (selected) {
-                                      setState(() {
-                                        if (selected) {
-                                          _selectedWorkingDays.add(day);
-                                        } else {
-                                          _selectedWorkingDays.remove(day);
-                                        }
-                                      });
-                                    },
-                                  );
-                                }).toList(),
+                            children: _daysOfWeek.map((day) {
+                              return FilterChip(
+                                label: Text(day),
+                                selected: _selectedWorkingDays.contains(day),
+                                onSelected: (selected) {
+                                  setState(() {
+                                    if (selected) {
+                                      _selectedWorkingDays.add(day);
+                                    } else {
+                                      _selectedWorkingDays.remove(day);
+                                    }
+                                  });
+                                },
+                              );
+                            }).toList(),
                           ),
                         ],
                       ),
@@ -561,30 +626,38 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                             String salonName = _salonNameController.text.trim();
                             String address = _addressController.text.trim();
                             String phoneNumber =
-                                _phoneNumberController.text.trim();
-                            List<String> workers =
-                                _workersController.text
-                                    .split(',')
-                                    .map((e) => e.trim())
-                                    .where((e) => e.isNotEmpty)
-                                    .toList();
-                            String vlasnik = _vlasnikController.text.trim();
-
-                            print('Salon Name: $salonName'); // Debug log
-                            print('Address: $address'); // Debug log
-                            print('Phone Number: $phoneNumber'); // Debug log
-                            print('Workers: $workers'); // Debug log
-                            print('Vlasnik: $vlasnik'); // Debug log
+                            _phoneNumberController.text.trim();
+                            List<String> workers = _workersController.text
+                                .split(',')
+                                .map((e) => e.trim())
+                                .where((e) => e.isNotEmpty)
+                                .toList();
+                            String vlasnikEmail = _vlasnikController.text.trim();
 
                             // Validate required fields
                             if (salonName.isEmpty ||
                                 address.isEmpty ||
                                 phoneNumber.isEmpty ||
-                                vlasnik.isEmpty) {
+                                vlasnikEmail.isEmpty ||
+                                _selectedCity == null) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
                                     'Please fill all required fields.',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
+                            // Provjeri postoji li korisnik s unesenim email-om
+                            final userId = await _findUserByEmail(vlasnikEmail);
+                            if (userId == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'User with this email does not exist.',
                                   ),
                                   backgroundColor: Colors.red,
                                 ),
@@ -612,10 +685,11 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                               'adresa': address,
                               'brojTelefona': phoneNumber,
                               'radnici': workers, // Save workers as a list
-                              'vlasnik': vlasnik,
+                              'vlasnik': vlasnikEmail,
+                              'grad': _selectedCity, // Spremi odabrani grad
                               'workingDays': _selectedWorkingDays,
                               'workingHours': workingHours,
-                              'vlasnikId': null,
+                              'vlasnikId': userId, // Spremi ID vlasnika
                               'kreiran': DateTime.now(),
                               'logoUrl': logoUrl, // Add logo URL
                             };
@@ -623,18 +697,27 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                             print('Saving salon data: $salonData'); // Debug log
 
                             // Save or update the salon in Firestore
+                            DocumentReference salonRef;
                             if (widget.salonId.isEmpty) {
                               // Create a new salon
-                              await FirebaseFirestore.instance
+                              salonRef = await FirebaseFirestore.instance
                                   .collection('saloni')
                                   .add(salonData);
                             } else {
                               // Update an existing salon
-                              await FirebaseFirestore.instance
+                              salonRef = FirebaseFirestore.instance
                                   .collection('saloni')
-                                  .doc(widget.salonId)
-                                  .update(salonData);
+                                  .doc(widget.salonId);
+                              await salonRef.update(salonData);
                             }
+
+                            // Spremi salonId u korisnikov dokument
+                            await FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(userId)
+                                .update({
+                              'salonId': salonRef.id, // Spremi ID salona u korisnikov dokument
+                            });
 
                             // Show success message
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -655,6 +738,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                               _openingTime = TimeOfDay(hour: 9, minute: 0);
                               _closingTime = TimeOfDay(hour: 18, minute: 0);
                               _pickedImage = null;
+                              _selectedCity = null; // Resetiraj odabrani grad
                             });
                           } catch (e) {
                             // Show error message if something goes wrong
@@ -690,8 +774,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder:
-                                  (context) => const SalonListAdminScreen(),
+                              builder: (context) => const SalonListAdminScreen(),
                             ),
                           );
                         },
