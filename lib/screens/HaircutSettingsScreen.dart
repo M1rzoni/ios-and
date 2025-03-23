@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; // Za rad s datumima
+import 'package:intl/intl.dart'; // For date formatting
 
 class HaircutSettingsScreen extends StatefulWidget {
   final String salonId;
@@ -17,13 +17,23 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
   final TextEditingController _alertController = TextEditingController();
   DateTime? _expirationDate;
 
+  // Add a new haircut type
   void _addHaircutType() async {
     final String haircutType = _haircutTypeController.text.trim();
-    final String price = _priceController.text.trim();
+    final String priceText = _priceController.text.trim();
 
-    if (haircutType.isEmpty || price.isEmpty) {
+    if (haircutType.isEmpty || priceText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Molimo unesite vrstu frizure i cijenu.')),
+      );
+      return;
+    }
+
+    // Validate and parse the price
+    double? price = double.tryParse(priceText);
+    if (price == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cijena mora biti validan broj.')),
       );
       return;
     }
@@ -34,36 +44,41 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
         .doc(widget.salonId)
         .collection('haircuts')
         .add({
-      'type': haircutType,
-      'price': price,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+          'type': haircutType,
+          'price': price, // Store as double
+          'timestamp': FieldValue.serverTimestamp(),
+        });
 
     // Clear input fields
     _haircutTypeController.clear();
     _priceController.clear();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Frizura je dodana!')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Frizura je dodana!')));
   }
 
+  // Fetch haircuts from Firestore
   Stream<QuerySnapshot> _getHaircutsStream() {
     return FirebaseFirestore.instance
         .collection('saloni')
         .doc(widget.salonId)
         .collection('haircuts')
+        .orderBy('timestamp', descending: true)
         .snapshots();
   }
 
+  // Fetch alerts from Firestore
   Stream<QuerySnapshot> _getAlertsStream() {
     return FirebaseFirestore.instance
         .collection('saloni')
         .doc(widget.salonId)
         .collection('alerts')
+        .orderBy('timestamp', descending: true)
         .snapshots();
   }
 
+  // Build the haircuts table
   Widget _buildHaircutsTable() {
     return StreamBuilder<QuerySnapshot>(
       stream: _getHaircutsStream(),
@@ -91,28 +106,40 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
                 DataColumn(label: Text('Cijena (KM)')),
                 DataColumn(label: Text('Akcije')),
               ],
-              rows: haircuts.map((haircut) {
-                return DataRow(
-                  cells: [
-                    DataCell(Text(haircut['type'])),
-                    DataCell(Text(haircut['price'])),
-                    DataCell(
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () => _editHaircut(haircut.id, haircut['type'], haircut['price']),
+              rows:
+                  haircuts.map((haircut) {
+                    return DataRow(
+                      cells: [
+                        DataCell(Text(haircut['type'])),
+                        DataCell(Text(haircut['price'].toString())),
+                        DataCell(
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.edit,
+                                  color: Colors.blue,
+                                ),
+                                onPressed:
+                                    () => _editHaircut(
+                                      haircut.id,
+                                      haircut['type'],
+                                      haircut['price'],
+                                    ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () => _deleteHaircut(haircut.id),
+                              ),
+                            ],
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _deleteHaircut(haircut.id),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              }).toList(),
+                        ),
+                      ],
+                    );
+                  }).toList(),
             ),
           ),
         );
@@ -120,6 +147,7 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
     );
   }
 
+  // Build the alerts table
   Widget _buildAlertsTable() {
     return StreamBuilder<QuerySnapshot>(
       stream: _getAlertsStream(),
@@ -147,28 +175,46 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
                 DataColumn(label: Text('Datum isteka')),
                 DataColumn(label: Text('Akcije')),
               ],
-              rows: alerts.map((alert) {
-                return DataRow(
-                  cells: [
-                    DataCell(Text(alert['text'])),
-                    DataCell(Text(DateFormat('dd/MM/yyyy').format((alert['expirationDate'] as Timestamp).toDate()))),
-                    DataCell(
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () => _editAlert(alert.id, alert['text'], alert['expirationDate']),
+              rows:
+                  alerts.map((alert) {
+                    return DataRow(
+                      cells: [
+                        DataCell(Text(alert['text'])),
+                        DataCell(
+                          Text(
+                            DateFormat('dd/MM/yyyy').format(
+                              (alert['expirationDate'] as Timestamp).toDate(),
+                            ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _deleteAlert(alert.id),
+                        ),
+                        DataCell(
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.edit,
+                                  color: Colors.blue,
+                                ),
+                                onPressed:
+                                    () => _editAlert(
+                                      alert.id,
+                                      alert['text'],
+                                      alert['expirationDate'],
+                                    ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () => _deleteAlert(alert.id),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              }).toList(),
+                        ),
+                      ],
+                    );
+                  }).toList(),
             ),
           ),
         );
@@ -176,9 +222,10 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
     );
   }
 
-  void _editHaircut(String id, String type, String price) {
+  // Edit a haircut
+  void _editHaircut(String id, String type, double price) {
     _haircutTypeController.text = type;
-    _priceController.text = price;
+    _priceController.text = price.toString();
 
     showDialog(
       context: context,
@@ -206,15 +253,27 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
             ),
             TextButton(
               onPressed: () async {
+                double? newPrice = double.tryParse(
+                  _priceController.text.trim(),
+                );
+                if (newPrice == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Cijena mora biti validan broj.'),
+                    ),
+                  );
+                  return;
+                }
+
                 await FirebaseFirestore.instance
                     .collection('saloni')
                     .doc(widget.salonId)
                     .collection('haircuts')
                     .doc(id)
                     .update({
-                  'type': _haircutTypeController.text.trim(),
-                  'price': _priceController.text.trim(),
-                });
+                      'type': _haircutTypeController.text.trim(),
+                      'price': newPrice,
+                    });
                 Navigator.pop(context);
                 _haircutTypeController.clear();
                 _priceController.clear();
@@ -227,6 +286,7 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
     );
   }
 
+  // Delete a haircut
   void _deleteHaircut(String id) async {
     await FirebaseFirestore.instance
         .collection('saloni')
@@ -236,6 +296,7 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
         .delete();
   }
 
+  // Edit an alert
   void _editAlert(String id, String text, DateTime expirationDate) {
     _alertController.text = text;
     _expirationDate = expirationDate;
@@ -276,9 +337,9 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
                     .collection('alerts')
                     .doc(id)
                     .update({
-                  'text': _alertController.text.trim(),
-                  'expirationDate': _expirationDate,
-                });
+                      'text': _alertController.text.trim(),
+                      'expirationDate': _expirationDate,
+                    });
                 Navigator.pop(context);
                 _alertController.clear();
                 setState(() {
@@ -293,6 +354,7 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
     );
   }
 
+  // Delete an alert
   void _deleteAlert(String id) async {
     await FirebaseFirestore.instance
         .collection('saloni')
@@ -302,12 +364,15 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
         .delete();
   }
 
+  // Add an alert
   void _addAlert() async {
     final String alertText = _alertController.text.trim();
 
     if (alertText.isEmpty || _expirationDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Molimo unesite tekst alarma i datum isteka.')),
+        const SnackBar(
+          content: Text('Molimo unesite tekst alarma i datum isteka.'),
+        ),
       );
       return;
     }
@@ -318,10 +383,10 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
         .doc(widget.salonId)
         .collection('alerts')
         .add({
-      'text': alertText,
-      'expirationDate': _expirationDate,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+          'text': alertText,
+          'expirationDate': _expirationDate,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
 
     // Clear input fields
     _alertController.clear();
@@ -329,11 +394,12 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
       _expirationDate = null;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Alarm je dodan!')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Alarm je dodan!')));
   }
 
+  // Select expiration date for an alert
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -401,166 +467,174 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
               ),
               Expanded(
                 child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-
-                      // Haircut Type Field
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        child: TextField(
-                          controller: _haircutTypeController,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            labelText: 'Vrsta frizure',
-                            labelStyle: TextStyle(color: Colors.white),
-                            hintText: 'Unesite vrstu frizure',
-                            hintStyle: TextStyle(
-                              color: Color.fromRGBO(255, 255, 255, 0.5),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Price Field
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        child: TextField(
-                          controller: _priceController,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            labelText: 'Cijena',
-                            labelStyle: TextStyle(color: Colors.white),
-                            hintText: 'Unesite cijenu',
-                            hintStyle: TextStyle(
-                              color: Color.fromRGBO(255, 255, 255, 0.5),
-                            ),
-                          ),
-                          keyboardType: TextInputType.number,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      // Add Haircut Button
-                      ElevatedButton(
-                        onPressed: _addHaircutType,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal.shade800,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        // Haircut Type Field
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 32,
-                            vertical: 16,
+                            horizontal: 16,
+                            vertical: 8,
                           ),
-                        ),
-                        child: const Text(
-                          'Dodaj frizuru',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      const Text(
-                        'Dodane frizure',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                      const SizedBox(height: 8),
-                      _buildHaircutsTable(),
-                      const SizedBox(height: 32),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        child: TextField(
-                          controller: _alertController,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            labelText: 'Tekst alarma',
-                            labelStyle: TextStyle(color: Colors.white),
-                            hintText: 'Unesite tekst alarma',
-                            hintStyle: TextStyle(
-                              color: Color.fromRGBO(255, 255, 255, 0.5),
+                          child: TextField(
+                            controller: _haircutTypeController,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              labelText: 'Vrsta frizure',
+                              labelStyle: TextStyle(color: Colors.white),
+                              hintText: 'Unesite vrstu frizure',
+                              hintStyle: TextStyle(
+                                color: Color.fromRGBO(255, 255, 255, 0.5),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Date Picker
-                      ElevatedButton(
-                        onPressed: () => _selectDate(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal.shade800,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
+                        const SizedBox(height: 16),
+                        // Price Field
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 32,
-                            vertical: 16,
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: TextField(
+                            controller: _priceController,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              labelText: 'Cijena',
+                              labelStyle: TextStyle(color: Colors.white),
+                              hintText: 'Unesite cijenu',
+                              hintStyle: TextStyle(
+                                color: Color.fromRGBO(255, 255, 255, 0.5),
+                              ),
+                            ),
+                            keyboardType: TextInputType.number,
                           ),
                         ),
-                        child: Text(
-                          _expirationDate == null
-                              ? 'Odaberite datum isteka'
-                              : 'Datum isteka: ${DateFormat('dd/MM/yyyy').format(_expirationDate!)}',
-                          style: const TextStyle(fontSize: 16),
+                        const SizedBox(height: 24),
+                        // Add Haircut Button
+                        ElevatedButton(
+                          onPressed: _addHaircutType,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal.shade800,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                          ),
+                          child: const Text(
+                            'Dodaj frizuru',
+                            style: TextStyle(fontSize: 16),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      // Add Alert Button
-                      ElevatedButton(
-                        onPressed: _addAlert,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal.shade800,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
+                        const SizedBox(height: 32),
+                        const Text(
+                          'Dodane frizure',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildHaircutsTable(),
+                        const SizedBox(height: 32),
+                        // Alert Text Field
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 32,
-                            vertical: 16,
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: TextField(
+                            controller: _alertController,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              labelText: 'Tekst alarma',
+                              labelStyle: TextStyle(color: Colors.white),
+                              hintText: 'Unesite tekst alarma',
+                              hintStyle: TextStyle(
+                                color: Color.fromRGBO(255, 255, 255, 0.5),
+                              ),
+                            ),
                           ),
                         ),
-                        child: const Text(
-                          'Dodaj alarm',
-                          style: TextStyle(fontSize: 16),
+                        const SizedBox(height: 16),
+                        // Date Picker
+                        ElevatedButton(
+                          onPressed: () => _selectDate(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal.shade800,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                          ),
+                          child: Text(
+                            _expirationDate == null
+                                ? 'Odaberite datum isteka'
+                                : 'Datum isteka: ${DateFormat('dd/MM/yyyy').format(_expirationDate!)}',
+                            style: const TextStyle(fontSize: 16),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Dodani alarmi',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                      const SizedBox(height: 8),
-                      _buildAlertsTable(),
-                    ],
+                        const SizedBox(height: 24),
+                        // Add Alert Button
+                        ElevatedButton(
+                          onPressed: _addAlert,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal.shade800,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                          ),
+                          child: const Text(
+                            'Dodaj alarm',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Dodani alarmi',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildAlertsTable(),
+                      ],
+                    ),
                   ),
                 ),
-                ),
-              )
+              ),
             ],
           ),
         ),

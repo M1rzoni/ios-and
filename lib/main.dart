@@ -42,7 +42,7 @@ class MyApp extends StatelessWidget {
 Future<Map<String, dynamic>?> getUserData(String uid) async {
   try {
     DocumentSnapshot<Map<String, dynamic>> snapshot =
-    await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
     if (snapshot.exists) {
       return snapshot.data();
     } else {
@@ -55,18 +55,18 @@ Future<Map<String, dynamic>?> getUserData(String uid) async {
 }
 
 void _navigateToAppointments(
-    BuildContext context,
-    String idSalona,
-    bool isOwner,
-    ) {
+  BuildContext context,
+  String idSalona,
+  bool isOwner,
+) {
   Navigator.push(
     context,
     MaterialPageRoute(
       builder:
           (context) => AppointmentsScreen(
-        idSalona: idSalona,
-        isOwner: isOwner, // Pass the isOwner value
-      ),
+            idSalona: idSalona,
+            isOwner: isOwner, // Pass the isOwner value
+          ),
     ),
   );
 }
@@ -104,14 +104,18 @@ final GoRouter router = GoRouter(
               } else {
                 final userData = snapshot.data!;
                 if (userData['salonId'] != null && userData['salonId'] != "") {
-                  bool isOwner = userData['salonId'] != null && userData['salonId'] != "";
+                  bool isOwner =
+                      userData['salonId'] != null && userData['salonId'] != "";
                   print('User is owner: $isOwner'); // Debugging
                   var salonId = userData['salonId'];
 
                   // Preusmjeri na AppointmentsScreen sa salonId i isOwner vrijednostima
                   return AppointmentsScreen(
-                    idSalona: userData['salonId'] ?? "", // Ispravno prosljeđivanje imenovanog parametra
-                    isOwner: isOwner,                    // Ispravno prosljeđivanje imenovanog parametra
+                    idSalona:
+                        userData['salonId'] ??
+                        "", // Ispravno prosljeđivanje imenovanog parametra
+                    isOwner:
+                        isOwner, // Ispravno prosljeđivanje imenovanog parametra
                   );
                 } else {
                   // Preusmjeri na SalonListScreen ako korisnik nema salonId
