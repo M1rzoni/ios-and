@@ -1,31 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:frizerski_salon/screens/HaircutSettingsScreen.dart';
+import 'package:frizerski_salon/screens/login_screen.dart'; // Dodaj import za LoginScreen
 
 class AppointmentsScreen extends StatelessWidget {
   final String idSalona;
-  final bool isOwner; // Add this to check if the user is an owner
+  final bool isOwner; // Provjera da li je korisnik vlasnik
 
   const AppointmentsScreen({
     Key? key,
-    required this.idSalona, // Obavezan imenovani parametar
-    required this.isOwner,  // Obavezan imenovani parametar
+    required this.idSalona,
+    required this.isOwner,
   }) : super(key: key);
 
   void _deleteAppointment(String docId, BuildContext context) async {
     await FirebaseFirestore.instance.collection('termini').doc(docId).delete();
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Termin je obrisan!')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Termin je obrisan!')),
+    );
   }
 
-  // Navigate to the settings screen for owners
   void _navigateToSettings(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => HaircutSettingsScreen(salonId: idSalona),
       ),
+    );
+  }
+
+  void _logout(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => LoginScreen()),
     );
   }
 
@@ -46,15 +55,15 @@ class AppointmentsScreen extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              // AppBar with gradient background
+              // AppBar sa logout dugmetom
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Color(0xFF26A69A), // Teal
-                      Color(0xFF80CBC4), // Lighter teal
+                      Color(0xFF26A69A),
+                      Color(0xFF80CBC4),
                     ],
                   ),
                 ),
@@ -78,42 +87,35 @@ class AppointmentsScreen extends StatelessWidget {
                       ),
                     ),
                     Spacer(),
-                    // Show settings button only if the user is an owner
-                    if (isOwner)
+                    // Prikazujemo dugmad ako je vlasnik
+                    if (isOwner) ...[
                       IconButton(
                         icon: const Icon(Icons.settings, color: Colors.white),
                         onPressed: () => _navigateToSettings(context),
                       ),
+                      IconButton(
+                        icon: const Icon(Icons.logout, color: Colors.white),
+                        onPressed: () => _logout(context),
+                      ),
+                    ],
                   ],
                 ),
               ),
               Expanded(
                 child: StreamBuilder(
-                  stream:
-                      FirebaseFirestore.instance
-                          .collection('termini')
-                          .where('salonId', isEqualTo: idSalona)
-                          .orderBy('timestamp', descending: true)
-                          .snapshots(),
+                  stream: FirebaseFirestore.instance
+                      .collection('termini')
+                      .where('salonId', isEqualTo: idSalona)
+                      .orderBy('timestamp', descending: true)
+                      .snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      print('Loading data...');
                       return const Center(child: CircularProgressIndicator());
                     }
-
                     if (snapshot.hasError) {
-                      print('Error: ${snapshot.error}');
                       return const Center(child: Text('Došlo je do greške.'));
                     }
-
-                    if (!snapshot.hasData) {
-                      print('No data found');
-                      return const Center(child: Text('Nema podataka.'));
-                    }
-
-                    var appointments = snapshot.data!.docs;
-
-                    if (appointments.isEmpty) {
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                       return const Center(
                         child: Text(
                           'Nema zakazanih termina.',
@@ -121,6 +123,8 @@ class AppointmentsScreen extends StatelessWidget {
                         ),
                       );
                     }
+
+                    var appointments = snapshot.data!.docs;
 
                     return ListView.builder(
                       itemCount: appointments.length,
@@ -147,11 +151,10 @@ class AppointmentsScreen extends StatelessWidget {
                             ),
                             trailing: IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed:
-                                  () => _deleteAppointment(
-                                    appointment.id,
-                                    context,
-                                  ),
+                              onPressed: () => _deleteAppointment(
+                                appointment.id,
+                                context,
+                              ),
                             ),
                           ),
                         );

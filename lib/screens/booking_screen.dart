@@ -25,6 +25,7 @@ class _BookingScreenState extends State<BookingScreen> {
   String? _selectedWorker;
   late List<String> _workingDays;
   late String _workingHours;
+  List<Map<String, dynamic>> _alerts = [];
 
   @override
   void initState() {
@@ -32,6 +33,26 @@ class _BookingScreenState extends State<BookingScreen> {
     _fetchSalonDetails();
     _fetchServices();
     _fetchWorkers();
+    _fetchAlerts();
+  }
+
+
+
+  void _fetchAlerts() async {
+    try {
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('saloni')
+          .doc(widget.idSalona)
+          .collection('alerts')
+          .where('expirationDate', isGreaterThanOrEqualTo: DateTime.now()) // Samo aktivni alarmi
+          .get();
+
+      setState(() {
+        _alerts = querySnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+      });
+    } catch (e) {
+      print('Error fetching alerts: $e');
+    }
   }
 
   void _fetchSalonDetails() async {
@@ -382,6 +403,47 @@ class _BookingScreenState extends State<BookingScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (_alerts.isNotEmpty)
+                          Column(
+                            children: _alerts.map((alert) {
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade100,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.warning_amber, color: Colors.orange),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            alert['text'],
+                                            style: const TextStyle(
+                                              color: Colors.orange,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Objavljeno: ${DateFormat('dd.MM.yyyy').format((alert['timestamp'] as Timestamp).toDate())}',
+                                            style: const TextStyle(
+                                              color: Colors.orange,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
                         const SizedBox(height: 10),
                         Container(
                           decoration: BoxDecoration(

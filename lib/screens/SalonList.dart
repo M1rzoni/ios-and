@@ -226,7 +226,6 @@ class _SalonListScreenState extends State<SalonListScreen> {
                             style: TextStyle(color: Colors.grey), // Siva boja za ovu opciju
                           ),
                         ),
-                        // Dodajemo ostale gradove
                         ...CitiesList.cities.map((String city) {
                           return DropdownMenuItem<String>(
                             value: city,
@@ -404,12 +403,10 @@ class _SalonListScreenState extends State<SalonListScreen> {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(15),
                         onTap: () {
-                          Navigator.pushReplacement(
+                          Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder:
-                                  (context) =>
-                                      BookingScreen(idSalona: idSalona),
+                              builder: (context) => BookingScreen(idSalona: idSalona),
                             ),
                           );
                         },

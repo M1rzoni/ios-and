@@ -233,7 +233,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                       _passwordController.text,
                                     );
                                 if (user != null) {
-                                  if (user.emailVerified) {
                                     Map<String, dynamic>? userData =
                                         await _authService.getUserData(
                                           user.uid,
@@ -258,32 +257,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ),
                                       );
                                     }
-                                  } else {
-                                    setState(() {
-                                      errorMessage =
-                                          "Molimo vas da verifikujte svoj email pre prijave.";
-                                    });
-                                    await user.sendEmailVerification();
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) {
-                                        return AlertDialog(
-                                          title: Text('Verifikacija emaila'),
-                                          content: Text(
-                                            'Poslali smo vam email za verifikaciju. Molimo vas da proverite svoj inbox i verifikujte email pre nego što se prijavite.',
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () {
-                                                Navigator.pop(context);
-                                              },
-                                              child: Text('OK'),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    );
-                                  }
+
                                 } else {
                                   setState(() {
                                     errorMessage = "Prijava nije uspjela!";
