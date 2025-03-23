@@ -19,6 +19,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _phoneNumberController = TextEditingController();
   String errorMessage = "";
 
+  Future<void> _sendEmailVerification(User user) async {
+    await user.sendEmailVerification();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -274,12 +278,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 _phoneNumberController.text,
                               );
                           if (user != null) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SalonListScreen(),
-                              ),
+                            await _sendEmailVerification(user);
+
+                            // Show a dialog to inform the user to check their email
+                            showDialog(
+                              context: context,
+                              builder: (context) {
+                                return AlertDialog(
+                                  title: Text('Verifikacija emaila'),
+                                  content: Text(
+                                    'Poslali smo vam email za verifikaciju. Molimo vas da provjerite svoj inbox i verifikujte email prije nego što se prijavite.',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                      },
+                                      child: Text('OK'),
+                                    ),
+                                  ],
+                                );
+                              },
                             );
+
+                            // Optionally, you can navigate to a different screen or log the user out until they verify their email
+                            // Navigator.push(
+                            //   context,
+                            //   MaterialPageRoute(
+                            //     builder: (context) => const SalonListScreen(),
+                            //   ),
+                            // );
                           } else {
                             setState(() {
                               errorMessage = "Registracija nije uspjela!";
