@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:path/path.dart' as path; // Add this import
 import 'package:frizerski_salon/screens/SalonList.dart';
 import 'AuthService.dart';
 
@@ -17,7 +22,56 @@ class _RegisterScreenState extends State<RegisterScreen> {
       TextEditingController();
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _phoneNumberController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
+  File? _profileImage;
+  String? _profileImageUrl;
   String errorMessage = "";
+  bool _isImageUploading = false;
+
+  Future<void> _pickImage() async {
+    try {
+      final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        setState(() {
+          _profileImage = File(pickedFile.path);
+          _isImageUploading = true;
+        });
+        await _uploadImage();
+      }
+    } catch (e) {
+      print('Error picking image: $e');
+      setState(() {
+        errorMessage = "Error selecting image";
+        _isImageUploading = false;
+      });
+    }
+  }
+
+  Future<void> _uploadImage() async {
+    if (_profileImage == null) return;
+
+    try {
+      // Create a reference to the location you want to upload to in Firebase Storage
+      final fileName = path.basename(_profileImage!.path);
+      final destination = 'profile_images/$fileName';
+
+      final ref = FirebaseStorage.instance.ref(destination);
+      final uploadTask = ref.putFile(_profileImage!);
+
+      final snapshot = await uploadTask.whenComplete(() {});
+      _profileImageUrl = await snapshot.ref.getDownloadURL();
+
+      setState(() {
+        _isImageUploading = false;
+      });
+    } catch (e) {
+      print('Error uploading image: $e');
+      setState(() {
+        errorMessage = "Error uploading image";
+        _isImageUploading = false;
+      });
+    }
+  }
 
   Future<void> _sendEmailVerification(User user) async {
     await user.sendEmailVerification();
@@ -81,7 +135,64 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 30),
+
+                    // Profile Picture Section
+                    Center(
+                      child: Stack(
+                        children: [
+                          _isImageUploading
+                              ? CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              )
+                              : GestureDetector(
+                                onTap: _pickImage,
+                                child: CircleAvatar(
+                                  radius: 50,
+                                  backgroundColor: Colors.white.withOpacity(
+                                    0.2,
+                                  ),
+                                  backgroundImage:
+                                      _profileImage != null
+                                          ? FileImage(_profileImage!)
+                                          : null,
+                                  child:
+                                      _profileImage == null
+                                          ? Icon(
+                                            Icons.camera_alt,
+                                            size: 40,
+                                            color: Colors.white,
+                                          )
+                                          : null,
+                                ),
+                              ),
+                          if (_profileImage != null && !_isImageUploading)
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Color(0xFF26A69A),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                    Icons.edit,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  onPressed: _pickImage,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+
+                    // Full Name Field
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
@@ -116,6 +227,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
+
+                    // Phone Number Field
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
@@ -151,6 +264,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
+
+                    // Email Field
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
@@ -186,6 +301,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
+
                     // Password Field
                     Container(
                       decoration: BoxDecoration(
@@ -222,6 +338,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
+
+                    // Confirm Password Field
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
@@ -257,6 +375,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 40),
+
+                    // Register Button
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -270,17 +390,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             return;
                           }
 
+                          if (_fullNameController.text.isEmpty) {
+                            setState(() {
+                              errorMessage = "Unesite vaše ime i prezime!";
+                            });
+                            return;
+                          }
+
+                          setState(() {
+                            _isImageUploading = true;
+                          });
+
                           User? user = await _authService
                               .registerWithEmailAndPassword(
                                 _emailController.text,
                                 _passwordController.text,
                                 _fullNameController.text,
                                 _phoneNumberController.text,
+                                profileImageUrl: _profileImageUrl,
                               );
+
+                          setState(() {
+                            _isImageUploading = false;
+                          });
+
                           if (user != null) {
                             await _sendEmailVerification(user);
 
-                            // Show a dialog to inform the user to check their email
                             showDialog(
                               context: context,
                               builder: (context) {
@@ -293,6 +429,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     TextButton(
                                       onPressed: () {
                                         Navigator.pop(context);
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder:
+                                                (context) =>
+                                                    const SalonListScreen(),
+                                          ),
+                                        );
                                       },
                                       child: Text('OK'),
                                     ),
@@ -300,14 +444,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 );
                               },
                             );
-
-                            // Optionally, you can navigate to a different screen or log the user out until they verify their email
-                            // Navigator.push(
-                            //   context,
-                            //   MaterialPageRoute(
-                            //     builder: (context) => const SalonListScreen(),
-                            //   ),
-                            // );
                           } else {
                             setState(() {
                               errorMessage = "Registracija nije uspjela!";
@@ -321,13 +457,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: const Text(
-                          'Create Account',
-                          style: TextStyle(fontSize: 16),
-                        ),
+                        child:
+                            _isImageUploading
+                                ? CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                )
+                                : const Text(
+                                  'Kreiraj račun',
+                                  style: TextStyle(fontSize: 16),
+                                ),
                       ),
                     ),
                     const SizedBox(height: 20),
+
                     // Already have account link
                     Center(
                       child: TextButton(

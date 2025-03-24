@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:frizerski_salon/cities_list.dart';
 import 'package:frizerski_salon/screens/login_screen.dart';
+import 'package:frizerski_salon/screens/profile_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'booking_screen.dart';
 
@@ -41,10 +42,11 @@ class _SalonListScreenState extends State<SalonListScreen> {
   // Funkcija za dohvaćanje lajkovanih salona iz korisničkog dokumenta
   Future<List<String>> getFavoritedSalons(String userId) async {
     try {
-      DocumentSnapshot<Map<String, dynamic>> userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .get();
+      DocumentSnapshot<Map<String, dynamic>> userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .get();
 
       if (userDoc.exists) {
         List<dynamic> favorites = userDoc.data()?['favorites'] ?? [];
@@ -59,12 +61,14 @@ class _SalonListScreenState extends State<SalonListScreen> {
   }
 
   // Funkcija za ažuriranje lajkovanih salona u korisničkom dokumentu
-  Future<void> updateFavoritedSalons(String userId, List<String> favoritedSalons) async {
+  Future<void> updateFavoritedSalons(
+    String userId,
+    List<String> favoritedSalons,
+  ) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .update({'favorites': favoritedSalons});
+      await FirebaseFirestore.instance.collection('users').doc(userId).update({
+        'favorites': favoritedSalons,
+      });
     } catch (e) {
       print('Error updating favorited salons: $e');
     }
@@ -93,7 +97,9 @@ class _SalonListScreenState extends State<SalonListScreen> {
     await updateFavoritedSalons(userId, _favoritedSalons);
 
     // Ažuriraj broj lajkova u kolekciji saloni
-    final salonRef = FirebaseFirestore.instance.collection('saloni').doc(salonId);
+    final salonRef = FirebaseFirestore.instance
+        .collection('saloni')
+        .doc(salonId);
     if (_favoritedSalons.contains(salonId)) {
       await salonRef.update({'favorites': FieldValue.increment(1)});
     } else {
@@ -109,7 +115,9 @@ class _SalonListScreenState extends State<SalonListScreen> {
     });
   }
 
-  List<QueryDocumentSnapshot> _sortSalonsByCity(List<QueryDocumentSnapshot> salons) {
+  List<QueryDocumentSnapshot> _sortSalonsByCity(
+    List<QueryDocumentSnapshot> salons,
+  ) {
     if (_selectedCity == null) return salons;
 
     return salons.where((salon) {
@@ -126,9 +134,7 @@ class _SalonListScreenState extends State<SalonListScreen> {
     } catch (e) {
       print('Error during logout: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Došlo je do greške prilikom odjave: $e'),
-        ),
+        SnackBar(content: Text('Došlo je do greške prilikom odjave: $e')),
       );
     }
   }
@@ -145,6 +151,15 @@ class _SalonListScreenState extends State<SalonListScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ProfileScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
@@ -194,7 +209,9 @@ class _SalonListScreenState extends State<SalonListScreen> {
                     },
                   ),
                 ),
-                const SizedBox(height: 16), // Razmak između search field-a i dropdown-a
+                const SizedBox(
+                  height: 16,
+                ), // Razmak između search field-a i dropdown-a
                 // Dropdown za izbor grada
                 Container(
                   decoration: BoxDecoration(
@@ -215,7 +232,9 @@ class _SalonListScreenState extends State<SalonListScreen> {
                       decoration: InputDecoration(
                         labelText: 'Izaberi grad',
                         border: InputBorder.none, // Uklanjamo defaultni border
-                        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                        ),
                       ),
                       items: [
                         // Dodajemo opciju za poništavanje izbora
@@ -223,7 +242,9 @@ class _SalonListScreenState extends State<SalonListScreen> {
                           value: null, // Postavljamo vrednost na null
                           child: Text(
                             'Svi gradovi',
-                            style: TextStyle(color: Colors.grey), // Siva boja za ovu opciju
+                            style: TextStyle(
+                              color: Colors.grey,
+                            ), // Siva boja za ovu opciju
                           ),
                         ),
                         ...CitiesList.cities.map((String city) {
@@ -232,17 +253,21 @@ class _SalonListScreenState extends State<SalonListScreen> {
                             child: Text(
                               city,
                               style: TextStyle(
-                                color: _selectedCity == city
-                                    ? const Color(0xFF26A69A) // Promena boje za izabrani grad
-                                    : Colors.black,
+                                color:
+                                    _selectedCity == city
+                                        ? const Color(
+                                          0xFF26A69A,
+                                        ) // Promena boje za izabrani grad
+                                        : Colors.black,
                               ),
                             ),
                           );
-                        }).toList(),
+                        }),
                       ],
                       onChanged: (String? newValue) {
                         setState(() {
-                          _selectedCity = newValue; // Postavljamo _selectedCity na null ako je izabrana opcija "Svi gradovi"
+                          _selectedCity =
+                              newValue; // Postavljamo _selectedCity na null ako je izabrana opcija "Svi gradovi"
                         });
                       },
                     ),
@@ -276,7 +301,7 @@ class _SalonListScreenState extends State<SalonListScreen> {
                     _onTabSelected(0);
                   },
                   child: Text(
-                    'Following',
+                    'Svi Saloni',
                     style: TextStyle(
                       color:
                           _selectedTabIndex == 0
@@ -291,7 +316,7 @@ class _SalonListScreenState extends State<SalonListScreen> {
                     _onTabSelected(1);
                   },
                   child: Text(
-                    'Popular',
+                    'Preporučeni',
                     style: TextStyle(
                       color:
                           _selectedTabIndex == 1
@@ -306,7 +331,7 @@ class _SalonListScreenState extends State<SalonListScreen> {
                     _onTabSelected(2);
                   },
                   child: Text(
-                    'Recent',
+                    'Omiljeni',
                     style: TextStyle(
                       color:
                           _selectedTabIndex == 2
@@ -343,29 +368,33 @@ class _SalonListScreenState extends State<SalonListScreen> {
                 var salons = snapshot.data!.docs;
 
                 // Filter salons based on search query and selected tab
-                var filteredSalons = salons.where((salon) {
-                  var salonData = salon.data() as Map<String, dynamic>;
-                  String naziv = salonData['naziv'] ?? '';
-                  String grad = salonData['grad'] ?? '';
+                var filteredSalons =
+                    salons.where((salon) {
+                      var salonData = salon.data() as Map<String, dynamic>;
+                      String naziv = salonData['naziv'] ?? '';
+                      String grad = salonData['grad'] ?? '';
 
-                  // Filtriraj po pretrazi
-                  if (_searchQuery.isNotEmpty &&
-                      !naziv.toLowerCase().contains(_searchQuery.toLowerCase())) {
-                    return false;
-                  }
+                      // Filtriraj po pretrazi
+                      if (_searchQuery.isNotEmpty &&
+                          !naziv.toLowerCase().contains(
+                            _searchQuery.toLowerCase(),
+                          )) {
+                        return false;
+                      }
 
-                  // Filtriraj po izabranom gradu
-                  if (_selectedCity != null && grad != _selectedCity) {
-                    return false;
-                  }
+                      // Filtriraj po izabranom gradu
+                      if (_selectedCity != null && grad != _selectedCity) {
+                        return false;
+                      }
 
-                  // Filtriraj po tabu (Following, Popular, Recent)
-                  if (_selectedTabIndex == 2 && !_favoritedSalons.contains(salon.id)) {
-                    return false;
-                  }
+                      // Filtriraj po tabu (Following, Popular, Recent)
+                      if (_selectedTabIndex == 2 &&
+                          !_favoritedSalons.contains(salon.id)) {
+                        return false;
+                      }
 
-                  return true;
-                }).toList();
+                      return true;
+                    }).toList();
 
                 // Sort salons by favorites (for Popular tab)
                 if (_selectedTabIndex == 1) {
@@ -406,7 +435,9 @@ class _SalonListScreenState extends State<SalonListScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => BookingScreen(idSalona: idSalona),
+                              builder:
+                                  (context) =>
+                                      BookingScreen(idSalona: idSalona),
                             ),
                           );
                         },

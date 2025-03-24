@@ -13,7 +13,7 @@ class AuthService {
   Future<Map<String, dynamic>?> getUserData(String uid) async {
     try {
       DocumentSnapshot userDoc =
-      await _firestore.collection('users').doc(uid).get();
+          await _firestore.collection('users').doc(uid).get();
       if (userDoc.exists) {
         return userDoc.data() as Map<String, dynamic>?;
       }
@@ -26,11 +26,12 @@ class AuthService {
 
   // 🔹 Registracija korisnika emailom i lozinkom
   Future<User?> registerWithEmailAndPassword(
-      String email,
-      String password,
-      String fullName,
-      String phoneNumber,
-      ) async {
+    String email,
+    String password,
+    String fullName,
+    String phoneNumber, {
+    String? profileImageUrl,
+  }) async {
     try {
       UserCredential userCredential = await _auth
           .createUserWithEmailAndPassword(email: email, password: password);
@@ -40,6 +41,7 @@ class AuthService {
         'email': email,
         'fullName': fullName,
         'phoneNumber': phoneNumber,
+        'profileImageUrl': profileImageUrl,
         'salonId': '',
       });
 
