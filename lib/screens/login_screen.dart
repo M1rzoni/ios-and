@@ -34,13 +34,15 @@ class _LoginScreenState extends State<LoginScreen> {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Password reset email sent. Check your inbox.'),
+          content: Text(
+            'Email za resetovanje lozinke je poslan. Provjerite svoj inbox.',
+          ),
         ),
       );
     } catch (e) {
       setState(() {
         errorMessage =
-            "Failed to send password reset email. Please check your email address.";
+            "Slanje emaila za resetovanje lozinke nije uspjelo. Provjerite vašu email adresu.";
       });
     }
   }
@@ -180,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           _forgotPassword(context);
                         },
                         child: Text(
-                          'Zaboravaljena šifra?',
+                          'Zaboravljena šifra?',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.8),
                             fontSize: 12,
@@ -233,6 +235,37 @@ class _LoginScreenState extends State<LoginScreen> {
                                       _passwordController.text,
                                     );
                                 if (user != null) {
+                                  if (!user.emailVerified) {
+                                    setState(() {
+                                      errorMessage =
+                                          "Molimo verificirajte svoj email prije prijave!";
+                                    });
+
+                                    await user.sendEmailVerification();
+
+                                    showDialog(
+                                      context: context,
+                                      builder:
+                                          (context) => AlertDialog(
+                                            title: Text(
+                                              'Verifikacija emaila potrebna',
+                                            ),
+                                            content: Text(
+                                              'Poslali smo vam verifikacioni email. Molimo provjerite inbox i kliknite na link za verifikaciju prije nego što se prijavite.',
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed:
+                                                    () =>
+                                                        Navigator.pop(context),
+                                                child: Text('OK'),
+                                              ),
+                                            ],
+                                          ),
+                                    );
+                                    return;
+                                  }
+
                                   Map<String, dynamic>? userData =
                                       await _authService.getUserData(user.uid);
                                   if (userData != null &&
