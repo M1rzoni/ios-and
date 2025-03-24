@@ -25,7 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (email.isEmpty) {
       setState(() {
-        errorMessage = "Molimo vas unesite vašu email adresu.";
+        errorMessage = "Please enter your email address.";
       });
       return;
     }
@@ -82,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     const SizedBox(height: 40),
                     const Text(
-                      'Prijava',
+                      'Login',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 32,
@@ -103,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Email',
+                            'Username',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 14,
@@ -114,7 +114,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: 'Unesite vaš email',
+                              hintText: 'Enter your username',
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
@@ -138,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Šifra',
+                            'Password',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 14,
@@ -149,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: 'Unesite vašu šifru',
+                              hintText: 'Enter your password',
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
@@ -180,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           _forgotPassword(context);
                         },
                         child: Text(
-                          'Zaboravljena šifra?',
+                          'Forgot Password?',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.8),
                             fontSize: 12,
@@ -204,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         Text(
-                          'Zapamti me',
+                          'Remember Me',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.8),
                             fontSize: 14,
@@ -213,7 +213,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Spacer(),
                         SizedBox(
                           height: 40,
-                          width: 150, // Wider button
+                          width: 100,
                           child: ElevatedButton(
                             onPressed: () async {
                               if (_emailController.text == 'admin' &&
@@ -233,7 +233,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                       _passwordController.text,
                                     );
                                 if (user != null) {
-                                  if (user.emailVerified) {
                                     Map<String, dynamic>? userData =
                                         await _authService.getUserData(
                                           user.uid,
@@ -258,32 +257,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ),
                                       );
                                     }
-                                  } else {
-                                    setState(() {
-                                      errorMessage =
-                                          "Molimo vas da verifikujte svoj email prije prijave.";
-                                    });
-                                    await user.sendEmailVerification();
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) {
-                                        return AlertDialog(
-                                          title: Text('Verifikacija emaila'),
-                                          content: Text(
-                                            'Poslali smo vam email za verifikaciju. Molimo vas da provjerite svoj inbox i verifikujte email pre nego što se prijavite.',
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () {
-                                                Navigator.pop(context);
-                                              },
-                                              child: Text('OK'),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    );
-                                  }
+
                                 } else {
                                   setState(() {
                                     errorMessage = "Prijava nije uspjela!";
@@ -298,12 +272,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                             ),
-                            child: const Text('Prijavi se'),
+                            child: const Text('Sign In'),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 45),
+                    const SizedBox(height: 30),
                     Center(
                       child: TextButton(
                         onPressed: () {
@@ -321,9 +295,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               fontSize: 14,
                             ),
                             children: const [
-                              TextSpan(text: "Nemaš račun? "),
+                              TextSpan(text: "Don't have an account? "),
                               TextSpan(
-                                text: 'Registruj se',
+                                text: 'Register',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   decoration: TextDecoration.underline,

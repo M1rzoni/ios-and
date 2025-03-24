@@ -1,5 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:frizerski_salon/cities_list.dart';
+import 'package:frizerski_salon/screens/login_screen.dart';
+import 'package:go_router/go_router.dart';
 import 'booking_screen.dart';
 
 class SalonListScreen extends StatefulWidget {
@@ -12,34 +16,121 @@ class SalonListScreen extends StatefulWidget {
 class _SalonListScreenState extends State<SalonListScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  final List<String> _favoritedSalons = []; // Track favorited salons
+  List<String> _favoritedSalons = []; // Lista ID-jeva lajkovanih salona
   int _selectedTabIndex = 0; // 0: Following, 1: Popular, 2: Recent
+  String? _selectedCity;
 
-  // Function to toggle favorite and update Firestore
+  @override
+  void initState() {
+    super.initState();
+    _loadFavoritedSalons(); // Učitaj lajkovane salone prilikom učitavanja ekrana
+  }
+
+  // Funkcija za učitavanje lajkovanih salona iz Firestore-a
+  Future<void> _loadFavoritedSalons() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return; // Ako korisnik nije prijavljen, ne radi ništa
+
+    final userId = user.uid;
+    final favoritedSalons = await getFavoritedSalons(userId);
+    setState(() {
+      _favoritedSalons = favoritedSalons;
+    });
+  }
+
+  // Funkcija za dohvaćanje lajkovanih salona iz korisničkog dokumenta
+  Future<List<String>> getFavoritedSalons(String userId) async {
+    try {
+      DocumentSnapshot<Map<String, dynamic>> userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+
+      if (userDoc.exists) {
+        List<dynamic> favorites = userDoc.data()?['favorites'] ?? [];
+        return favorites.cast<String>();
+      } else {
+        return [];
+      }
+    } catch (e) {
+      print('Error fetching favorited salons: $e');
+      return [];
+    }
+  }
+
+  // Funkcija za ažuriranje lajkovanih salona u korisničkom dokumentu
+  Future<void> updateFavoritedSalons(String userId, List<String> favoritedSalons) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .update({'favorites': favoritedSalons});
+    } catch (e) {
+      print('Error updating favorited salons: $e');
+    }
+  }
+
+  // Funkcija za lajkanje/odlajkanje salona
   Future<void> _toggleFavorite(String salonId) async {
-    final salonRef = FirebaseFirestore.instance
-        .collection('saloni')
-        .doc(salonId);
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return; // Ako korisnik nije prijavljen, ne radi ništa
+
+    final userId = user.uid;
 
     if (_favoritedSalons.contains(salonId)) {
-      // Unfavorite: Decrement the favorite count
-      await salonRef.update({'favorites': FieldValue.increment(-1)});
+      // Odlajkaj: Ukloni salon iz liste lajkovanih
       setState(() {
         _favoritedSalons.remove(salonId);
       });
     } else {
-      // Favorite: Increment the favorite count
-      await salonRef.update({'favorites': FieldValue.increment(1)});
+      // Lajkaj: Dodaj salon u listu lajkovanih
       setState(() {
         _favoritedSalons.add(salonId);
       });
     }
+
+    // Ažuriraj Firestore
+    await updateFavoritedSalons(userId, _favoritedSalons);
+
+    // Ažuriraj broj lajkova u kolekciji saloni
+    final salonRef = FirebaseFirestore.instance.collection('saloni').doc(salonId);
+    if (_favoritedSalons.contains(salonId)) {
+      await salonRef.update({'favorites': FieldValue.increment(1)});
+    } else {
+      await salonRef.update({'favorites': FieldValue.increment(-1)});
+    }
   }
 
+  // Funkcija za promjenu taba
   void _onTabSelected(int index) {
     setState(() {
+      _searchQuery = '';
       _selectedTabIndex = index;
     });
+  }
+
+  List<QueryDocumentSnapshot> _sortSalonsByCity(List<QueryDocumentSnapshot> salons) {
+    if (_selectedCity == null) return salons;
+
+    return salons.where((salon) {
+      var salonData = salon.data() as Map<String, dynamic>;
+      String grad = salonData['grad'] ?? '';
+      return grad == _selectedCity;
+    }).toList();
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      context.go('/login');
+    } catch (e) {
+      print('Error during logout: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Došlo je do greške prilikom odjave: $e'),
+        ),
+      );
+    }
   }
 
   @override
@@ -55,9 +146,9 @@ class _SalonListScreenState extends State<SalonListScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              // Implement search functionality
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await _logout(context);
             },
           ),
         ],
@@ -67,41 +158,99 @@ class _SalonListScreenState extends State<SalonListScreen> {
           // Search Bar
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+            child: Column(
+              children: [
+                // Search Field
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Pretraži salone...',
-                  prefixIcon: const Icon(
-                    Icons.search,
-                    color: Color(0xFF26A69A),
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Pretraži salone...',
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: Color(0xFF26A69A),
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                    },
                   ),
                 ),
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value;
-                  });
-                },
-              ),
+                const SizedBox(height: 16), // Razmak između search field-a i dropdown-a
+                // Dropdown za izbor grada
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedCity,
+                      decoration: InputDecoration(
+                        labelText: 'Izaberi grad',
+                        border: InputBorder.none, // Uklanjamo defaultni border
+                        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      items: [
+                        // Dodajemo opciju za poništavanje izbora
+                        const DropdownMenuItem<String>(
+                          value: null, // Postavljamo vrednost na null
+                          child: Text(
+                            'Svi gradovi',
+                            style: TextStyle(color: Colors.grey), // Siva boja za ovu opciju
+                          ),
+                        ),
+                        ...CitiesList.cities.map((String city) {
+                          return DropdownMenuItem<String>(
+                            value: city,
+                            child: Text(
+                              city,
+                              style: TextStyle(
+                                color: _selectedCity == city
+                                    ? const Color(0xFF26A69A) // Promena boje za izabrani grad
+                                    : Colors.black,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ],
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedCity = newValue; // Postavljamo _selectedCity na null ako je izabrana opcija "Svi gradovi"
+                        });
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          // Navbar
           Container(
             padding: const EdgeInsets.symmetric(vertical: 10),
             decoration: BoxDecoration(
@@ -127,7 +276,7 @@ class _SalonListScreenState extends State<SalonListScreen> {
                     _onTabSelected(0);
                   },
                   child: Text(
-                    'Svi saloni',
+                    'Following',
                     style: TextStyle(
                       color:
                           _selectedTabIndex == 0
@@ -142,7 +291,7 @@ class _SalonListScreenState extends State<SalonListScreen> {
                     _onTabSelected(1);
                   },
                   child: Text(
-                    'Preporučeni',
+                    'Popular',
                     style: TextStyle(
                       color:
                           _selectedTabIndex == 1
@@ -157,7 +306,7 @@ class _SalonListScreenState extends State<SalonListScreen> {
                     _onTabSelected(2);
                   },
                   child: Text(
-                    'Omiljeni',
+                    'Recent',
                     style: TextStyle(
                       color:
                           _selectedTabIndex == 2
@@ -194,25 +343,29 @@ class _SalonListScreenState extends State<SalonListScreen> {
                 var salons = snapshot.data!.docs;
 
                 // Filter salons based on search query and selected tab
-                var filteredSalons =
-                    salons.where((salon) {
-                      var salonData = salon.data() as Map<String, dynamic>;
-                      String naziv = salonData['naziv'] ?? '';
+                var filteredSalons = salons.where((salon) {
+                  var salonData = salon.data() as Map<String, dynamic>;
+                  String naziv = salonData['naziv'] ?? '';
+                  String grad = salonData['grad'] ?? '';
 
-                      if (_searchQuery.isNotEmpty &&
-                          !naziv.toLowerCase().contains(
-                            _searchQuery.toLowerCase(),
-                          )) {
-                        return false;
-                      }
+                  // Filtriraj po pretrazi
+                  if (_searchQuery.isNotEmpty &&
+                      !naziv.toLowerCase().contains(_searchQuery.toLowerCase())) {
+                    return false;
+                  }
 
-                      if (_selectedTabIndex == 2 &&
-                          !_favoritedSalons.contains(salon.id)) {
-                        return false;
-                      }
+                  // Filtriraj po izabranom gradu
+                  if (_selectedCity != null && grad != _selectedCity) {
+                    return false;
+                  }
 
-                      return true;
-                    }).toList();
+                  // Filtriraj po tabu (Following, Popular, Recent)
+                  if (_selectedTabIndex == 2 && !_favoritedSalons.contains(salon.id)) {
+                    return false;
+                  }
+
+                  return true;
+                }).toList();
 
                 // Sort salons by favorites (for Popular tab)
                 if (_selectedTabIndex == 1) {
@@ -250,12 +403,10 @@ class _SalonListScreenState extends State<SalonListScreen> {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(15),
                         onTap: () {
-                          Navigator.pushReplacement(
+                          Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder:
-                                  (context) =>
-                                      BookingScreen(idSalona: idSalona),
+                              builder: (context) => BookingScreen(idSalona: idSalona),
                             ),
                           );
                         },

@@ -36,13 +36,13 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
 
   // List of days for the dropdown
   final List<String> _daysOfWeek = [
-    'Ponedeljak',
-    'Utorak',
-    'Srijeda',
-    'Četvrtak',
-    'Petak',
-    'Subota',
-    'Nedelja',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
   ];
 
   XFile? _pickedImage; // Use XFile instead of File for web compatibility
@@ -176,12 +176,11 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
   // Function to find user by email
   Future<String?> _findUserByEmail(String email) async {
     try {
-      final querySnapshot =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .where('email', isEqualTo: email)
-              .limit(1)
-              .get();
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
 
       if (querySnapshot.docs.isNotEmpty) {
         return querySnapshot.docs.first.id; // Return user ID
@@ -239,7 +238,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                     const SizedBox(height: 20),
                     // Salon Creation Title
                     const Text(
-                      'Napravi salon',
+                      'Create Salon',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 32,
@@ -248,7 +247,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Dodaj novi salon u sistem',
+                      'Add a new salon to the system',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.8),
                         fontSize: 16,
@@ -265,45 +264,42 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child:
-                            _pickedImage != null
-                                ? kIsWeb
-                                    ? FutureBuilder<Uint8List>(
-                                      future: _pickedImage!.readAsBytes(),
-                                      builder: (context, snapshot) {
-                                        if (snapshot.connectionState ==
-                                            ConnectionState.waiting) {
-                                          return CircularProgressIndicator();
-                                        } else if (snapshot.hasError) {
-                                          return Icon(
-                                            Icons.error,
-                                            color: Colors.red,
-                                            size: 40,
-                                          );
-                                        } else if (snapshot.hasData) {
-                                          return Image.memory(
-                                            snapshot.data!,
-                                            fit: BoxFit.cover,
-                                          );
-                                        } else {
-                                          return Icon(
-                                            Icons.add_a_photo,
-                                            color: Colors.white.withOpacity(
-                                              0.5,
-                                            ),
-                                            size: 40,
-                                          );
-                                        }
-                                      },
-                                    )
-                                    : Image.file(
-                                      File(_pickedImage!.path),
-                                    ) // For mobile
-                                : Icon(
-                                  Icons.add_a_photo,
-                                  color: Colors.white.withOpacity(0.5),
-                                  size: 40,
-                                ),
+                        child: _pickedImage != null
+                            ? kIsWeb
+                            ? FutureBuilder<Uint8List>(
+                          future: _pickedImage!.readAsBytes(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return CircularProgressIndicator();
+                            } else if (snapshot.hasError) {
+                              return Icon(
+                                Icons.error,
+                                color: Colors.red,
+                                size: 40,
+                              );
+                            } else if (snapshot.hasData) {
+                              return Image.memory(
+                                snapshot.data!,
+                                fit: BoxFit.cover,
+                              );
+                            } else {
+                              return Icon(
+                                Icons.add_a_photo,
+                                color: Colors.white.withOpacity(0.5),
+                                size: 40,
+                              );
+                            }
+                          },
+                        )
+                            : Image.file(
+                          File(_pickedImage!.path),
+                        ) // For mobile
+                            : Icon(
+                          Icons.add_a_photo,
+                          color: Colors.white.withOpacity(0.5),
+                          size: 40,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -321,7 +317,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Naziv salona',
+                            'Salon Name',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 14,
@@ -332,7 +328,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: 'Unesite naziv salona',
+                              hintText: 'Enter salon name',
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
@@ -356,7 +352,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Adresa',
+                            'Address',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 14,
@@ -367,7 +363,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: 'Unesite adresu salona',
+                              hintText: 'Enter salon address',
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
@@ -391,7 +387,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Broj telefona',
+                            'Phone Number',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 14,
@@ -402,7 +398,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: 'Unesite broj telefona',
+                              hintText: 'Enter phone number',
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
@@ -426,7 +422,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Radnici',
+                            'Workers',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 14,
@@ -437,7 +433,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: 'Unesite radnike (odvojite zarezom)',
+                              hintText: 'Enter workers (comma separated)',
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
@@ -511,16 +507,15 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                                 color: Colors.white.withOpacity(0.5),
                               ),
                             ),
-                            items:
-                                CitiesList.cities.map((String city) {
-                                  return DropdownMenuItem<String>(
-                                    value: city,
-                                    child: Text(
-                                      city,
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                  );
-                                }).toList(),
+                            items: CitiesList.cities.map((String city) {
+                              return DropdownMenuItem<String>(
+                                value: city,
+                                child: Text(
+                                  city,
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              );
+                            }).toList(),
                             onChanged: (String? newValue) {
                               setState(() {
                                 _selectedCity = newValue;
@@ -545,31 +540,28 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Broj radni dana',
+                            'Working Days',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 14,
                             ),
                           ),
                           Wrap(
-                            children:
-                                _daysOfWeek.map((day) {
-                                  return FilterChip(
-                                    label: Text(day),
-                                    selected: _selectedWorkingDays.contains(
-                                      day,
-                                    ),
-                                    onSelected: (selected) {
-                                      setState(() {
-                                        if (selected) {
-                                          _selectedWorkingDays.add(day);
-                                        } else {
-                                          _selectedWorkingDays.remove(day);
-                                        }
-                                      });
-                                    },
-                                  );
-                                }).toList(),
+                            children: _daysOfWeek.map((day) {
+                              return FilterChip(
+                                label: Text(day),
+                                selected: _selectedWorkingDays.contains(day),
+                                onSelected: (selected) {
+                                  setState(() {
+                                    if (selected) {
+                                      _selectedWorkingDays.add(day);
+                                    } else {
+                                      _selectedWorkingDays.remove(day);
+                                    }
+                                  });
+                                },
+                              );
+                            }).toList(),
                           ),
                         ],
                       ),
@@ -589,7 +581,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Radni sati',
+                            'Working Hours',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 14,
@@ -601,7 +593,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                                 child: InkWell(
                                   onTap: () => _selectTime(context, true),
                                   child: Text(
-                                    'Otvaranje: ${_openingTime.format(context)}',
+                                    'Opening: ${_openingTime.format(context)}',
                                     style: TextStyle(color: Colors.white),
                                   ),
                                 ),
@@ -610,7 +602,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                                 child: InkWell(
                                   onTap: () => _selectTime(context, false),
                                   child: Text(
-                                    'Zatvaranje: ${_closingTime.format(context)}',
+                                    'Closing: ${_closingTime.format(context)}',
                                     style: TextStyle(color: Colors.white),
                                   ),
                                 ),
@@ -634,15 +626,13 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                             String salonName = _salonNameController.text.trim();
                             String address = _addressController.text.trim();
                             String phoneNumber =
-                                _phoneNumberController.text.trim();
-                            List<String> workers =
-                                _workersController.text
-                                    .split(',')
-                                    .map((e) => e.trim())
-                                    .where((e) => e.isNotEmpty)
-                                    .toList();
-                            String vlasnikEmail =
-                                _vlasnikController.text.trim();
+                            _phoneNumberController.text.trim();
+                            List<String> workers = _workersController.text
+                                .split(',')
+                                .map((e) => e.trim())
+                                .where((e) => e.isNotEmpty)
+                                .toList();
+                            String vlasnikEmail = _vlasnikController.text.trim();
 
                             // Validate required fields
                             if (salonName.isEmpty ||
@@ -652,7 +642,9 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                                 _selectedCity == null) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Molimo popunite sva polja'),
+                                  content: Text(
+                                    'Please fill all required fields.',
+                                  ),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -665,7 +657,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                    'Korisnik sa ovom email adresom ne postoji',
+                                    'User with this email does not exist.',
                                   ),
                                   backgroundColor: Colors.red,
                                 ),
@@ -724,10 +716,8 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                                 .collection('users')
                                 .doc(userId)
                                 .update({
-                                  'salonId':
-                                      salonRef
-                                          .id, // Spremi ID salona u korisnikov dokument
-                                });
+                              'salonId': salonRef.id, // Spremi ID salona u korisnikov dokument
+                            });
 
                             // Show success message
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -784,8 +774,7 @@ class _SalonCreationScreenState extends State<SalonCreationScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder:
-                                  (context) => const SalonListAdminScreen(),
+                              builder: (context) => const SalonListAdminScreen(),
                             ),
                           );
                         },
