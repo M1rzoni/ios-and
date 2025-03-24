@@ -235,7 +235,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                       _passwordController.text,
                                     );
                                 if (user != null) {
-                                  if (!user.emailVerified) {
+                                  // Provjera da li je korisnik admin ili ima verificiran email
+                                  if (!user.emailVerified &&
+                                      _emailController.text != 'admin') {
                                     setState(() {
                                       errorMessage =
                                           "Molimo verificirajte svoj email prije prijave!";
