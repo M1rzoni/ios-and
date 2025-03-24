@@ -66,7 +66,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 20),
                     const Text(
-                      'Register',
+                      'Registruj se',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 32,
@@ -75,7 +75,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Create your account',
+                      'Napravi svoj račun',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.8),
                         fontSize: 16,
@@ -95,7 +95,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Full Name',
+                            'Puno ime i prezime',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 14,
@@ -106,7 +106,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: 'Enter your full name',
+                              hintText: 'Unesite vaše ime i prezime',
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
@@ -129,7 +129,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Phone Number',
+                            'Broj telefona',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 14,
@@ -140,7 +140,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: 'Enter your phone number',
+                              hintText: 'Unesite vaš broj telefona',
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
@@ -175,7 +175,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: 'Enter your email',
+                              hintText: 'Unesite vašu email adresu',
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
@@ -200,7 +200,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Password',
+                            'Šifra',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 14,
@@ -211,7 +211,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: 'Create a password',
+                              hintText: 'Unesite šifru',
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
@@ -235,7 +235,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Confirm Password',
+                            'Potvrdite šifru',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 14,
@@ -246,7 +246,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: 'Confirm your password',
+                              hintText: 'Potvrdite šifru',
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
@@ -341,9 +341,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               fontSize: 14,
                             ),
                             children: const [
-                              TextSpan(text: "Already have an account? "),
+                              TextSpan(text: "Već imate račun? "),
                               TextSpan(
-                                text: 'Login',
+                                text: 'Prijavi se',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   decoration: TextDecoration.underline,

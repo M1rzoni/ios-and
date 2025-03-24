@@ -25,7 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (email.isEmpty) {
       setState(() {
-        errorMessage = "Please enter your email address.";
+        errorMessage = "Molimo unesite vašu email adresu.";
       });
       return;
     }
@@ -82,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     const SizedBox(height: 40),
                     const Text(
-                      'Login',
+                      'Prijava',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 32,
@@ -103,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Username',
+                            'Email',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 14,
@@ -114,7 +114,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: 'Enter your username',
+                              hintText: 'Unesite vašu email adresu',
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
@@ -138,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Password',
+                            'Šifra',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 14,
@@ -149,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: 'Enter your password',
+                              hintText: 'Unesite vašu šifru',
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
@@ -180,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           _forgotPassword(context);
                         },
                         child: Text(
-                          'Forgot Password?',
+                          'Zaboravaljena šifra?',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.8),
                             fontSize: 12,
@@ -204,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         Text(
-                          'Remember Me',
+                          'Zapamti me',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.8),
                             fontSize: 14,
@@ -233,31 +233,28 @@ class _LoginScreenState extends State<LoginScreen> {
                                       _passwordController.text,
                                     );
                                 if (user != null) {
-                                    Map<String, dynamic>? userData =
-                                        await _authService.getUserData(
-                                          user.uid,
-                                        );
-                                    if (userData != null &&
-                                        userData['salonId'] != "") {
-                                      bool isOwner =
-                                          userData['salonId'] != null &&
-                                          userData['salonId'] != "";
-                                      _navigateToAppointments(
-                                        context,
-                                        userData['salonId'] ?? "",
-                                        isOwner,
-                                      );
-                                    } else {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder:
-                                              (context) =>
-                                                  const SalonListScreen(),
-                                        ),
-                                      );
-                                    }
-
+                                  Map<String, dynamic>? userData =
+                                      await _authService.getUserData(user.uid);
+                                  if (userData != null &&
+                                      userData['salonId'] != "") {
+                                    bool isOwner =
+                                        userData['salonId'] != null &&
+                                        userData['salonId'] != "";
+                                    _navigateToAppointments(
+                                      context,
+                                      userData['salonId'] ?? "",
+                                      isOwner,
+                                    );
+                                  } else {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) =>
+                                                const SalonListScreen(),
+                                      ),
+                                    );
+                                  }
                                 } else {
                                   setState(() {
                                     errorMessage = "Prijava nije uspjela!";
@@ -272,7 +269,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                             ),
-                            child: const Text('Sign In'),
+                            child: const Text('Prijavi se'),
                           ),
                         ),
                       ],
@@ -295,9 +292,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               fontSize: 14,
                             ),
                             children: const [
-                              TextSpan(text: "Don't have an account? "),
+                              TextSpan(text: "Nemaš račun? "),
                               TextSpan(
-                                text: 'Register',
+                                text: 'Registruj se',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   decoration: TextDecoration.underline,
