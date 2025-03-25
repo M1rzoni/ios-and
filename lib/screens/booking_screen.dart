@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -132,6 +133,19 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   void _saveBooking() async {
+    // Dohvati trenutnog korisnika
+    User? user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Morate biti prijavljeni da biste rezervisali termin!'),
+          backgroundColor: Color(0xFF26A69A),
+        ),
+      );
+      return;
+    }
+
     if (_nameController.text.isEmpty ||
         _selectedServices.isEmpty ||
         _selectedDate == null ||
@@ -150,13 +164,13 @@ class _BookingScreenState extends State<BookingScreen> {
     String formattedTime = _selectedTime!.format(context);
 
     QuerySnapshot querySnapshot =
-        await FirebaseFirestore.instance
-            .collection('termini')
-            .where('salonId', isEqualTo: widget.idSalona)
-            .where('datum', isEqualTo: formattedDate)
-            .where('vrijeme', isEqualTo: formattedTime)
-            .where('worker', isEqualTo: _selectedWorker)
-            .get();
+    await FirebaseFirestore.instance
+        .collection('termini')
+        .where('salonId', isEqualTo: widget.idSalona)
+        .where('datum', isEqualTo: formattedDate)
+        .where('vrijeme', isEqualTo: formattedTime)
+        .where('worker', isEqualTo: _selectedWorker)
+        .get();
 
     if (querySnapshot.docs.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -177,6 +191,7 @@ class _BookingScreenState extends State<BookingScreen> {
       'timestamp': FieldValue.serverTimestamp(),
       'salonId': widget.idSalona,
       'worker': _selectedWorker,
+      'userId': user.uid, // Dodajemo user UUID
     });
 
     ScaffoldMessenger.of(context).showSnackBar(

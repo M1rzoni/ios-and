@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:frizerski_salon/screens/HaircutSettingsScreen.dart';
 import 'package:frizerski_salon/screens/login_screen.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   final String idSalona;
@@ -29,7 +31,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   void initState() {
     super.initState();
     _loadWorkers();
-    // Postavi početni datum na danas
     _selectedDate = DateTime.now();
   }
 
@@ -70,7 +71,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
   void _clearFilters() {
     setState(() {
-      _selectedDate = DateTime.now(); // Vrati na današnji datum
+      _selectedDate = DateTime.now();
       _selectedWorker = null;
     });
   }
@@ -99,7 +100,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     );
   }
 
-  // Metoda za parsiranje datuma iz formata "dd.MM.yyyy"
   DateTime? _parseAppointmentDate(String dateStr) {
     try {
       final parts = dateStr.split('.');
@@ -116,6 +116,186 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     return null;
   }
 
+  Future<Map<String, dynamic>?> _fetchUserDetails(String userId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      return doc.data();
+    } catch (e) {
+      print('Error fetching user details: $e');
+      return null;
+    }
+  }
+
+  Future<String?> _getProfileImageUrl(String userId) async {
+    try {
+      final ref = FirebaseStorage.instance.ref().child('profile_images/$userId');
+      return await ref.getDownloadURL();
+    } catch (e) {
+      print('No profile image found: $e');
+      return null;
+    }
+  }
+
+  void _showAppointmentDetails(BuildContext context, DocumentSnapshot appointment) async {
+    final userDetails = await _fetchUserDetails(appointment['userId']);
+    final imageUrl = userDetails?['profileImageUrl'] as String?;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => SingleChildScrollView(
+        child: Container(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            top: 20,
+            left: 20,
+            right: 20,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Text(
+                  'Detalji termina',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              SizedBox(height: 20),
+
+              // User Info Section with image on right
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left side - User details
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Korisnik:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        _buildDetailRow('Ime i prezime:', userDetails?['fullName'] ?? 'Nepoznato'),
+                        _buildDetailRow('Email:', userDetails?['email'] ?? 'Nepoznato'),
+                        _buildDetailRow('Broj telefona:', userDetails?['phoneNumber'] ?? 'Nepoznato'),
+                      ],
+                    ),
+                  ),
+
+                  // Right side - Profile image
+                  if (imageUrl != null)
+                    Container(
+                      margin: EdgeInsets.only(left: 16),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => CircularProgressIndicator(),
+                          errorWidget: (context, url, error) => Icon(Icons.person),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+
+              Divider(thickness: 2, height: 30),
+
+              // Appointment Details Section
+              Text(
+                'Detalji rezervacije:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              SizedBox(height: 10),
+              _buildDetailRow('Ime na rezervaciji:', appointment['ime']),
+              _buildDetailRow('Datum:', appointment['datum']),
+              _buildDetailRow('Vrijeme:', appointment['vrijeme']),
+              _buildDetailRow('Frizerski radnik:', appointment['worker'] ?? 'Nepoznato'),
+              _buildDetailRow('Cijena:', '${appointment['cijena'] ?? 'Nepoznato'} KM'),
+
+              // Services
+              SizedBox(height: 10),
+              Text(
+                'Usluge:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              ...(appointment['usluge'] as List<dynamic>? ?? []).map((service) =>
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0, top: 4),
+                    child: Text('- $service'),
+                  )
+              ).toList(),
+
+              SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('Zatvori'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      _deleteAppointment(appointment.id);
+                      Navigator.pop(context);
+                    },
+                    child: Text('Obriši termin'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              value,
+              softWrap: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -125,15 +305,14 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF26A69A), // Teal
-              Color(0xFF80CBC4), // Lighter teal
+              Color(0xFF26A69A),
+              Color(0xFF80CBC4),
             ],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // AppBar sa logout dugmetom
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -164,7 +343,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   ],
                 ),
               ),
-              // Filter sekcija
               Card(
                 margin: const EdgeInsets.all(10),
                 elevation: 4,
@@ -175,7 +353,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   padding: const EdgeInsets.all(12.0),
                   child: Column(
                     children: [
-                      // Datum filter
                       Row(
                         children: [
                           Expanded(
@@ -195,7 +372,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      // Radnik filter
                       DropdownButtonFormField<String>(
                         value: _selectedWorker,
                         decoration: InputDecoration(
@@ -223,7 +399,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                         },
                       ),
                       const SizedBox(height: 10),
-                      // Clear filter button
                       ElevatedButton(
                         onPressed: _selectedWorker == null ? null : _clearFilters,
                         style: ElevatedButton.styleFrom(
@@ -261,19 +436,15 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
                     var appointments = snapshot.data!.docs;
 
-                    // Filtriranje po datumu i radniku
                     appointments = appointments.where((appointment) {
-                      // Parsiranje datuma iz dokumenta
                       final appointmentDate = _parseAppointmentDate(appointment['datum']);
                       if (appointmentDate == null) return false;
 
-                      // Provjera datuma
                       final matchesDate = _selectedDate == null ||
                           (appointmentDate.year == _selectedDate!.year &&
                               appointmentDate.month == _selectedDate!.month &&
                               appointmentDate.day == _selectedDate!.day);
 
-                      // Provjera radnika
                       final matchesWorker = _selectedWorker == null ||
                           appointment['worker'] == _selectedWorker;
 
@@ -299,32 +470,35 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           elevation: 4,
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.all(16),
-                            title: Text(
-                              appointment['ime'],
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${appointment['usluga']} - ${appointment['datum']} u ${appointment['vrijeme']}',
-                                  style: const TextStyle(fontSize: 14),
+                          child: InkWell(
+                            onTap: () => _showAppointmentDetails(context, appointment),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.all(16),
+                              title: Text(
+                                appointment['ime'],
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                if (appointment['worker'] != null)
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                   Text(
-                                    'Frizerski radnik: ${appointment['worker']}',
+                                    '${appointment['datum']} u ${appointment['vrijeme']}',
                                     style: const TextStyle(fontSize: 14),
                                   ),
-                              ],
-                            ),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _deleteAppointment(appointment.id),
+                                  if (appointment['worker'] != null)
+                                    Text(
+                                      'Frizerski radnik: ${appointment['worker']}',
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                ],
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _deleteAppointment(appointment.id),
+                              ),
                             ),
                           ),
                         );
