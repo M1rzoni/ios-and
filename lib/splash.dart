@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';  // Moderni fontovi
-import 'package:lottie/lottie.dart';  // Animirana pozadina
+import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
 
 class Splash extends StatefulWidget {
   const Splash({super.key});
@@ -47,15 +47,10 @@ class _SplashState extends State<Splash> {
         fit: StackFit.expand,
         children: [
           // Animirana pozadina
-          Lottie.asset(
-            'assets/lottie/animation2.json',  // Postavi putanju do Lottie fajla
-            fit: BoxFit.cover,
-          ),
+          Lottie.asset('assets/lottie/animation2.json', fit: BoxFit.cover),
 
           // Tamni overlay za bolji kontrast
-          Container(
-            color: Colors.black.withOpacity(0.4),
-          ),
+          Container(color: Colors.black.withOpacity(0.4)),
 
           // Efekat zamagljenog stakla
           Center(
@@ -81,12 +76,13 @@ class _SplashState extends State<Splash> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Ikona ili logo
-                      /*Icon(
-                        Icons.scissors,
-                        size: 70,
-                        color: Colors.white.withOpacity(0.9),
-                      ),*/
+                      // Logo aplikacije
+                      Image.asset(
+                        'assets/icons/logo.png', // Putanja do vašeg logoa
+                        height: 180, // Prilagodite visinu po potrebi
+                        width: 180, // Prilagodite širinu po potrebi
+                        fit: BoxFit.contain,
+                      ),
                       const SizedBox(height: 15),
 
                       // Naslov aplikacije
@@ -99,7 +95,7 @@ class _SplashState extends State<Splash> {
                             Shadow(
                               blurRadius: 10,
                               color: Colors.black.withOpacity(0.3),
-                              offset: Offset(2, 2),
+                              offset: const Offset(2, 2),
                             ),
                           ],
                         ),
@@ -114,7 +110,7 @@ class _SplashState extends State<Splash> {
                           color: Colors.white.withOpacity(0.8),
                         ),
                       ),
-                      const SizedBox(height: 50),  // Povećano sa 30 na 50
+                      const SizedBox(height: 50),
 
                       // Loading indikator
                       CircularProgressIndicator(

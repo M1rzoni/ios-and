@@ -37,10 +37,11 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
 
   Future<void> _loadWorkingHours() async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('saloni')
-          .doc(widget.salonId)
-          .get();
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('saloni')
+              .doc(widget.salonId)
+              .get();
 
       if (doc.exists) {
         setState(() {
@@ -65,10 +66,11 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
 
   Future<void> _loadWorkers() async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('saloni')
-          .doc(widget.salonId)
-          .get();
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('saloni')
+              .doc(widget.salonId)
+              .get();
 
       if (doc.exists) {
         setState(() {
@@ -96,9 +98,9 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
     try {
       // Check if worker already exists
       if (_workers.contains(workerName)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Radnik već postoji.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Radnik već postoji.')));
         return;
       }
 
@@ -107,8 +109,8 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
           .collection('saloni')
           .doc(widget.salonId)
           .update({
-        'radnici': FieldValue.arrayUnion([workerName]),
-      });
+            'radnici': FieldValue.arrayUnion([workerName]),
+          });
 
       // Update local state
       setState(() {
@@ -116,9 +118,9 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
         _workerController.clear();
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Radnik je dodan!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Radnik je dodan!')));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Greška pri dodavanju radnika: $e')),
@@ -133,17 +135,17 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
           .collection('saloni')
           .doc(widget.salonId)
           .update({
-        'radnici': FieldValue.arrayRemove([workerName]),
-      });
+            'radnici': FieldValue.arrayRemove([workerName]),
+          });
 
       // Update local state
       setState(() {
         _workers.remove(workerName);
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Radnik je uklonjen!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Radnik je uklonjen!')));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Greška pri uklanjanju radnika: $e')),
@@ -159,9 +161,7 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -204,13 +204,17 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
                 children: [
                   const Text('Lista radnika:'),
                   const SizedBox(height: 8),
-                  ..._workers.map((worker) => ListTile(
-                    title: Text(worker),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _removeWorker(worker),
-                    ),
-                  )).toList(),
+                  ..._workers
+                      .map(
+                        (worker) => ListTile(
+                          title: Text(worker),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _removeWorker(worker),
+                          ),
+                        ),
+                      )
+                      .toList(),
                 ],
               ),
           ],
@@ -218,7 +222,6 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
       ),
     );
   }
-
 
   TimeOfDay? _parseTime(String timeString) {
     try {
@@ -247,18 +250,15 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
       await FirebaseFirestore.instance
           .collection('saloni')
           .doc(widget.salonId)
-          .update({
-        'workingDays': _workingDays,
-        'workingHours': workingHours,
-      });
+          .update({'workingDays': _workingDays, 'workingHours': workingHours});
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Radno vrijeme je spremljeno!')),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Greška pri spremanju: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Greška pri spremanju: $e')));
     }
   }
 
@@ -317,9 +317,7 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -336,27 +334,28 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
-              children: [
-                'Monday',
-                'Tuesday',
-                'Wednesday',
-                'Thursday',
-                'Friday',
-                'Saturday',
-                'Sunday',
-              ].map((day) {
-                final isSelected = _workingDays.contains(day);
-                return FilterChip(
-                  label: Text(_translateDay(day)),
-                  selected: isSelected,
-                  onSelected: (selected) => _toggleWorkingDay(day),
-                  selectedColor: Colors.teal.withOpacity(0.2),
-                  checkmarkColor: Colors.teal,
-                  labelStyle: TextStyle(
-                    color: isSelected ? Colors.teal : Colors.black,
-                  ),
-                );
-              }).toList(),
+              children:
+                  [
+                    'Monday',
+                    'Tuesday',
+                    'Wednesday',
+                    'Thursday',
+                    'Friday',
+                    'Saturday',
+                    'Sunday',
+                  ].map((day) {
+                    final isSelected = _workingDays.contains(day);
+                    return FilterChip(
+                      label: Text(_translateDay(day)),
+                      selected: isSelected,
+                      onSelected: (selected) => _toggleWorkingDay(day),
+                      selectedColor: Colors.teal.withOpacity(0.2),
+                      checkmarkColor: Colors.teal,
+                      labelStyle: TextStyle(
+                        color: isSelected ? Colors.teal : Colors.black,
+                      ),
+                    );
+                  }).toList(),
             ),
             const SizedBox(height: 16),
 
@@ -417,18 +416,24 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
 
   String _translateDay(String englishDay) {
     switch (englishDay) {
-      case 'Monday': return 'Ponedjeljak';
-      case 'Tuesday': return 'Utorak';
-      case 'Wednesday': return 'Srijeda';
-      case 'Thursday': return 'Četvrtak';
-      case 'Friday': return 'Petak';
-      case 'Saturday': return 'Subota';
-      case 'Sunday': return 'Nedjelja';
-      default: return englishDay;
+      case 'Monday':
+        return 'Ponedjeljak';
+      case 'Tuesday':
+        return 'Utorak';
+      case 'Wednesday':
+        return 'Srijeda';
+      case 'Thursday':
+        return 'Četvrtak';
+      case 'Friday':
+        return 'Petak';
+      case 'Saturday':
+        return 'Subota';
+      case 'Sunday':
+        return 'Nedjelja';
+      default:
+        return englishDay;
     }
   }
-
-
 
   void _addHaircutType() async {
     final String haircutType = _haircutTypeController.text.trim();
@@ -447,18 +452,18 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
         .doc(widget.salonId)
         .collection('haircuts')
         .add({
-      'type': haircutType,
-      'price': price,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+          'type': haircutType,
+          'price': price,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
 
     // Clear input fields
     _haircutTypeController.clear();
     _priceController.clear();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Frizura je dodana!')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Frizura je dodana!')));
   }
 
   Stream<QuerySnapshot> _getHaircutsStream() {
@@ -513,9 +518,9 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
                     .collection('haircuts')
                     .doc(id)
                     .update({
-                  'type': _haircutTypeController.text.trim(),
-                  'price': _priceController.text.trim(),
-                });
+                      'type': _haircutTypeController.text.trim(),
+                      'price': _priceController.text.trim(),
+                    });
                 Navigator.pop(context);
                 _haircutTypeController.clear();
                 _priceController.clear();
@@ -551,7 +556,9 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
             children: [
               TextField(
                 controller: _alertController,
-                decoration: const InputDecoration(labelText: 'Tekst notifikacije'),
+                decoration: const InputDecoration(
+                  labelText: 'Tekst notifikacije',
+                ),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
@@ -577,9 +584,9 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
                     .collection('alerts')
                     .doc(id)
                     .update({
-                  'text': _alertController.text.trim(),
-                  'expirationDate': _expirationDate,
-                });
+                      'text': _alertController.text.trim(),
+                      'expirationDate': _expirationDate,
+                    });
                 Navigator.pop(context);
                 _alertController.clear();
                 setState(() {
@@ -608,7 +615,9 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
 
     if (alertText.isEmpty || _expirationDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Molimo unesite tekst notifikacije i datum isteka.')),
+        const SnackBar(
+          content: Text('Molimo unesite tekst notifikacije i datum isteka.'),
+        ),
       );
       return;
     }
@@ -619,10 +628,10 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
         .doc(widget.salonId)
         .collection('alerts')
         .add({
-      'text': alertText,
-      'expirationDate': _expirationDate,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+          'text': alertText,
+          'expirationDate': _expirationDate,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
 
     // Clear input fields
     _alertController.clear();
@@ -630,9 +639,9 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
       _expirationDate = null;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Notifikacija je dodana!')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Notifikacija je dodana!')));
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -653,9 +662,7 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -731,11 +738,12 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
                         children: [
                           IconButton(
                             icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () => _editHaircut(
-                                haircut.id,
-                                haircut['type'],
-                                haircut['price']
-                            ),
+                            onPressed:
+                                () => _editHaircut(
+                                  haircut.id,
+                                  haircut['type'],
+                                  haircut['price'],
+                                ),
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),
@@ -758,9 +766,7 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -816,7 +822,9 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text('Nema dodanih notifikacija.'));
+                  return const Center(
+                    child: Text('Nema dodanih notifikacija.'),
+                  );
                 }
 
                 final alerts = snapshot.data!.docs;
@@ -827,22 +835,24 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
                   itemCount: alerts.length,
                   itemBuilder: (context, index) {
                     final alert = alerts[index];
-                    final expirationDate = (alert['expirationDate'] as Timestamp).toDate();
+                    final expirationDate =
+                        (alert['expirationDate'] as Timestamp).toDate();
                     return ListTile(
                       title: Text(alert['text']),
                       subtitle: Text(
-                          'Istječe: ${DateFormat('dd/MM/yyyy').format(expirationDate)}'
+                        'Istječe: ${DateFormat('dd/MM/yyyy').format(expirationDate)}',
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
                             icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () => _editAlert(
-                                alert.id,
-                                alert['text'],
-                                expirationDate
-                            ),
+                            onPressed:
+                                () => _editAlert(
+                                  alert.id,
+                                  alert['text'],
+                                  expirationDate,
+                                ),
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),

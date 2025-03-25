@@ -3,13 +3,10 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:frizerski_salon/cities_list.dart';
-import 'package:frizerski_salon/screens/login_screen.dart';
 import 'package:frizerski_salon/screens/profile_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'booking_screen.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
 
 class SalonListScreen extends StatefulWidget {
   const SalonListScreen({super.key});
@@ -21,7 +18,6 @@ class SalonListScreen extends StatefulWidget {
 class _SalonListScreenState extends State<SalonListScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  bool _isAppointmentsModalShowing = false;
   List<String> _favoritedSalons = []; // Lista ID-jeva lajkovanih salona
   int _selectedTabIndex = 0; // 0: Following, 1: Popular, 2: Recent
   String? _selectedCity;
@@ -62,23 +58,6 @@ class _SalonListScreenState extends State<SalonListScreen> {
     } catch (e) {
       print('Error fetching favorited salons: $e');
       return [];
-    }
-  }
-
-  DateTime _parseAppointmentDate(String dateString) {
-    try {
-      // Parse "dd.MM.yyyy" format
-      final parts = dateString.split('.');
-      if (parts.length != 3) throw FormatException('Invalid date format');
-
-      final day = int.parse(parts[0]);
-      final month = int.parse(parts[1]);
-      final year = int.parse(parts[2]);
-
-      return DateTime(year, month, day);
-    } catch (e) {
-      print('Error parsing date "$dateString": $e');
-      return DateTime.now(); // Fallback to current date if parsing fails
     }
   }
 
@@ -131,7 +110,8 @@ class _SalonListScreenState extends State<SalonListScreen> {
 
   Future<Icon> testImageDownload() async {
     try {
-      final url = 'https://firebasestorage.googleapis.com/v0/b/binaryteam-31798.appspot.com/o/salon_logos%2F1742902410946.jpg?alt=media&token=8f7ca908-c9a3-4b81-9750-87007c787920';
+      final url =
+          'https://firebasestorage.googleapis.com/v0/b/binaryteam-31798.appspot.com/o/salon_logos%2F1742902410946.jpg?alt=media&token=8f7ca908-c9a3-4b81-9750-87007c787920';
 
       // 1. Provera HEAD zahtjeva
       final headResponse = await http.head(Uri.parse(url));
@@ -142,7 +122,6 @@ class _SalonListScreenState extends State<SalonListScreen> {
       final getResponse = await http.get(Uri.parse(url));
       print('GET Response - Status: ${getResponse.statusCode}');
       print('Content-Length: ${getResponse.bodyBytes.length} bytes');
-
     } catch (e) {
       print('HTTP Request Error: $e');
     }
@@ -181,230 +160,6 @@ class _SalonListScreenState extends State<SalonListScreen> {
     }
   }
 
-  void _showMyAppointments(BuildContext context) async {
-    if (_isAppointmentsModalShowing) return;
-
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Morate biti prijavljeni da vidite svoje termine')),
-      );
-      return;
-    }
-
-    _isAppointmentsModalShowing = true;
-
-    // Show empty modal immediately with loading indicator
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    ).then((_) => _isAppointmentsModalShowing = false);
-
-    try {
-      // Fetch data in background
-      final appointments = await FirebaseFirestore.instance
-          .collection('termini')
-          .where('userId', isEqualTo: user.uid)
-          .orderBy('timestamp', descending: true)
-          .get();
-
-      List<Map<String, dynamic>> enrichedAppointments = [];
-
-      for (var appointment in appointments.docs) {
-        final data = appointment.data();
-        final salonId = data['salonId'];
-        String salonName = 'Nepoznat salon';
-
-        if (salonId != null) {
-          final salonDoc = await FirebaseFirestore.instance
-              .collection('saloni')
-              .doc(salonId)
-              .get();
-          if (salonDoc.exists) {
-            salonName = salonDoc.data()?['naziv'] ?? 'Nepoznat salon';
-          }
-        }
-
-        enrichedAppointments.add({
-          ...data,
-          'id': appointment.id,
-          'salonName': salonName,
-          'isPast': _isPastAppointment(data['datum'], data['vrijeme']),
-        });
-      }
-
-      // Replace loading modal with content
-      if (context.mounted) {
-        Navigator.pop(context); // Remove loading modal
-        _showAppointmentsContent(context, enrichedAppointments);
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.pop(context); // Remove loading modal
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Došlo je do greške: $e')),
-        );
-      }
-      _isAppointmentsModalShowing = false;
-    }
-  }
-
-  void _showAppointmentsContent(BuildContext context, List<Map<String, dynamic>> appointments) {
-    if (appointments.isEmpty) {
-      showModalBottomSheet(
-        context: context,
-        builder: (context) => const Center(child: Text('Nemate zakazanih termina')),
-      ).then((_) => _isAppointmentsModalShowing = false);
-      return;
-    }
-
-    appointments.sort((a, b) {
-      try {
-        final aDate = _parseAppointmentDate(a['datum']);
-        final bDate = _parseAppointmentDate(b['datum']);
-        return bDate.compareTo(aDate);
-      } catch (e) {
-        return 0;
-      }
-    });
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => DefaultTabController(
-        length: 2,
-        child: Scaffold(
-          appBar: AppBar(
-            title: const Text('Moje rezervacije'),
-            bottom: const TabBar(
-              tabs: [
-                Tab(text: 'Budući termini'),
-                Tab(text: 'Prošli termini'),
-              ],
-            ),
-          ),
-          body: TabBarView(
-            children: [
-              _buildAppointmentsList(
-                  appointments.where((a) => !a['isPast']).toList(),
-                  context
-              ),
-              _buildAppointmentsList(
-                  appointments.where((a) => a['isPast']).toList(),
-                  context
-              ),
-            ],
-          ),
-        ),
-      ),
-    ).then((_) => _isAppointmentsModalShowing = false);
-  }
-
-  bool _isPastAppointment(String date, String time) {
-    try {
-      final appointmentDate = _parseAppointmentDate(date);
-      final timeFormat = DateFormat('HH:mm');
-      final appointmentTime = timeFormat.parse(time);
-
-      final appointmentDateTime = DateTime(
-        appointmentDate.year,
-        appointmentDate.month,
-        appointmentDate.day,
-        appointmentTime.hour,
-        appointmentTime.minute,
-      );
-
-      return appointmentDateTime.isBefore(DateTime.now());
-    } catch (e) {
-      print('Error parsing appointment date/time: $e');
-      return false;
-    }
-  }
-
-  Widget _buildAppointmentsList(List<Map<String, dynamic>> appointments, BuildContext context) {
-    if (appointments.isEmpty) {
-      return const Center(
-        child: Text('Nema termina u ovoj kategoriji'),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: appointments.length,
-      itemBuilder: (context, index) {
-        final appointment = appointments[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  appointment['salonName'],
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${appointment['datum']} u ${appointment['vrijeme']}',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-                if (appointment['worker'] != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Frizerski radnik: ${appointment['worker']}',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ],
-                const SizedBox(height: 8),
-                Text(
-                  'Usluga: ${appointment['ime']}',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Cijena: ${appointment['cijena'] ?? 'Nepoznata cijena'} KM',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (appointment['isPast']) ...[
-                  const SizedBox(height: 8),
-                  OutlinedButton(
-                    onPressed: () => _rateAppointment(context, appointment['id']),
-                    child: const Text('Ocijenite uslugu'),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _rateAppointment(BuildContext context, String appointmentId) {
-    // TODO: Implement rating functionality
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Ocijenite uslugu'),
-        content: const Text('Ovdje možete dodati ocjenu i komentar za uslugu.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Zatvori'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -418,11 +173,6 @@ class _SalonListScreenState extends State<SalonListScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_today),
-            onPressed: () => _showMyAppointments(context),
-            tooltip: 'Moje rezervacije',
-          ),
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
@@ -722,20 +472,28 @@ class _SalonListScreenState extends State<SalonListScreen> {
                                 width: 60,
                                 height: 60,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF26A69A).withOpacity(0.1),
+                                  color: const Color(
+                                    0xFF26A69A,
+                                  ).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(15),
                                 ),
                                 child: FutureBuilder(
-                                  future: FirebaseStorage.instance
-                                      .ref('salon_logos/1742902410946.jpg')
-                                      .getDownloadURL(),
+                                  future:
+                                      FirebaseStorage.instance
+                                          .ref('salon_logos/1742902410946.jpg')
+                                          .getDownloadURL(),
                                   builder: (context, snapshot) {
-                                    if (snapshot.connectionState == ConnectionState.waiting) {
-                                      return const Center(child: CircularProgressIndicator());
+                                    if (snapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return const Center(
+                                        child: CircularProgressIndicator(),
+                                      );
                                     }
 
                                     if (snapshot.hasError) {
-                                      print('Error getting download URL: ${snapshot.error}');
+                                      print(
+                                        'Error getting download URL: ${snapshot.error}',
+                                      );
                                       return const Icon(Icons.error);
                                     }
 
@@ -746,17 +504,30 @@ class _SalonListScreenState extends State<SalonListScreen> {
                                       return Image.network(
                                         url,
                                         fit: BoxFit.cover,
-                                        loadingBuilder: (context, child, progress) {
+                                        loadingBuilder: (
+                                          context,
+                                          child,
+                                          progress,
+                                        ) {
                                           if (progress == null) return child;
                                           return Center(
                                             child: CircularProgressIndicator(
-                                              value: progress.expectedTotalBytes != null
-                                                  ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
-                                                  : null,
+                                              value:
+                                                  progress.expectedTotalBytes !=
+                                                          null
+                                                      ? progress
+                                                              .cumulativeBytesLoaded /
+                                                          progress
+                                                              .expectedTotalBytes!
+                                                      : null,
                                             ),
                                           );
                                         },
-                                        errorBuilder: (context, error, stackTrace) {
+                                        errorBuilder: (
+                                          context,
+                                          error,
+                                          stackTrace,
+                                        ) {
                                           print('Image load error: $error');
                                           return const Icon(Icons.broken_image);
                                         },

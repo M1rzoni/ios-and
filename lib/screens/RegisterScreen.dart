@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:path/path.dart' as path; // Add this import
+import 'package:path/path.dart' as path;
 import 'package:frizerski_salon/screens/SalonList.dart';
 import 'AuthService.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:typed_data';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -24,50 +26,119 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _phoneNumberController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   File? _profileImage;
+  Uint8List? _webImage;
+  Uint8List? _compressedImage;
   String? _profileImageUrl;
   String errorMessage = "";
   bool _isImageUploading = false;
 
+  Future<Uint8List?> _compressImage(File file) async {
+    try {
+      // Prvo provjerimo veličinu originalne slike
+      final originalSize = await file.length();
+
+      // Ako je slika manja od 2MB, ne kompresiramo je
+      if (originalSize < 2000000) {
+        return await file.readAsBytes();
+      }
+
+      // Obavijestimo korisnika o optimizaciji
+      if (originalSize > 5000000) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Optimiziramo vašu sliku za brži upload...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
+      final result = await FlutterImageCompress.compressWithFile(
+        file.absolute.path,
+        minWidth: originalSize > 5000000 ? 720 : 1080,
+        minHeight: originalSize > 5000000 ? 720 : 1080,
+        quality: originalSize > 10000000 ? 75 : 85,
+        format: CompressFormat.jpeg,
+        autoCorrectionAngle: true,
+      );
+
+      if (result == null) {
+        throw Exception('Kompresija nije uspjela');
+      }
+
+      return result;
+    } catch (e) {
+      print('Greška pri kompresiji slike: $e');
+      return null;
+    }
+  }
+
   Future<void> _pickImage() async {
     try {
-      final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+      final pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 90,
+      );
+
       if (pickedFile != null) {
         setState(() {
-          _profileImage = File(pickedFile.path);
           _isImageUploading = true;
+          errorMessage = "";
         });
-        await _uploadImage();
+
+        if (kIsWeb) {
+          // Web verzija - čitamo byteove direktno
+          final bytes = await pickedFile.readAsBytes();
+          setState(() {
+            _webImage = bytes;
+            _profileImage = File('dummy_path');
+          });
+          await _uploadImage(bytes);
+        } else {
+          // Mobile verzija - kompresija slike
+          final file = File(pickedFile.path);
+          final compressedImage = await _compressImage(file);
+
+          if (compressedImage != null) {
+            setState(() {
+              _profileImage = file;
+              _compressedImage = compressedImage;
+            });
+            await _uploadImage(compressedImage);
+          } else {
+            // Ako kompresija ne uspije, uploadaj original
+            await _uploadImage(await file.readAsBytes());
+          }
+        }
       }
     } catch (e) {
-      print('Error picking image: $e');
+      print('Greška pri odabiru slike: $e');
       setState(() {
-        errorMessage = "Error selecting image";
+        errorMessage = "Greška pri odabiru slike";
         _isImageUploading = false;
       });
     }
   }
 
-  Future<void> _uploadImage() async {
-    if (_profileImage == null) return;
-
+  Future<void> _uploadImage(Uint8List imageBytes) async {
     try {
-      // Create a reference to the location you want to upload to in Firebase Storage
-      final fileName = path.basename(_profileImage!.path);
+      final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final destination = 'profile_images/$fileName';
 
       final ref = FirebaseStorage.instance.ref(destination);
-      final uploadTask = ref.putFile(_profileImage!);
+      final metadata = SettableMetadata(contentType: 'image/jpeg');
 
-      final snapshot = await uploadTask.whenComplete(() {});
-      _profileImageUrl = await snapshot.ref.getDownloadURL();
+      await ref.putData(imageBytes, metadata);
+      _profileImageUrl = await ref.getDownloadURL();
 
       setState(() {
         _isImageUploading = false;
       });
     } catch (e) {
-      print('Error uploading image: $e');
+      print('Greška pri uploadu slike: $e');
       setState(() {
-        errorMessage = "Error uploading image";
+        errorMessage = "Greška pri uploadu slike";
         _isImageUploading = false;
       });
     }
@@ -155,11 +226,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     0.2,
                                   ),
                                   backgroundImage:
-                                      _profileImage != null
+                                      (_webImage != null && kIsWeb)
+                                          ? MemoryImage(_webImage!)
+                                          : (_profileImage != null)
                                           ? FileImage(_profileImage!)
                                           : null,
                                   child:
-                                      _profileImage == null
+                                      (_webImage == null &&
+                                              _profileImage == null)
                                           ? Icon(
                                             Icons.camera_alt,
                                             size: 40,
@@ -168,7 +242,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                           : null,
                                 ),
                               ),
-                          if (_profileImage != null && !_isImageUploading)
+                          if ((_webImage != null || _profileImage != null) &&
+                              !_isImageUploading)
                             Positioned(
                               bottom: 0,
                               right: 0,

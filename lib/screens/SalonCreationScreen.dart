@@ -5,7 +5,7 @@ import 'package:frizerski_salon/cities_list.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
-import 'package:flutter/foundation.dart'; // For kIsWeb
+// For kIsWeb
 import 'SalonListAdmin.dart'; // Import the SalonListScreen
 
 class SalonCreationScreen extends StatefulWidget {

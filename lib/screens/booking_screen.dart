@@ -133,6 +133,28 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   void _saveBooking() async {
+    // Provjeri da li je termin u prošlosti
+    if (_selectedDate != null && _selectedTime != null) {
+      final now = DateTime.now();
+      final appointmentDateTime = DateTime(
+        _selectedDate!.year,
+        _selectedDate!.month,
+        _selectedDate!.day,
+        _selectedTime!.hour,
+        _selectedTime!.minute,
+      );
+
+      if (appointmentDateTime.isBefore(now)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ne možete rezervisati termin u prošlosti!'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
     // Dohvati trenutnog korisnika
     User? user = FirebaseAuth.instance.currentUser;
 
@@ -164,13 +186,13 @@ class _BookingScreenState extends State<BookingScreen> {
     String formattedTime = _selectedTime!.format(context);
 
     QuerySnapshot querySnapshot =
-    await FirebaseFirestore.instance
-        .collection('termini')
-        .where('salonId', isEqualTo: widget.idSalona)
-        .where('datum', isEqualTo: formattedDate)
-        .where('vrijeme', isEqualTo: formattedTime)
-        .where('worker', isEqualTo: _selectedWorker)
-        .get();
+        await FirebaseFirestore.instance
+            .collection('termini')
+            .where('salonId', isEqualTo: widget.idSalona)
+            .where('datum', isEqualTo: formattedDate)
+            .where('vrijeme', isEqualTo: formattedTime)
+            .where('worker', isEqualTo: _selectedWorker)
+            .get();
 
     if (querySnapshot.docs.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -228,6 +250,9 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   void _pickDateTime() {
+    final now = DateTime.now();
+    final currentTime = TimeOfDay.fromDateTime(now);
+
     picker.DatePicker.showDatePicker(
       context,
       showTitleActions: true,
@@ -235,6 +260,12 @@ class _BookingScreenState extends State<BookingScreen> {
       maxTime: DateTime.now().add(const Duration(days: 30)),
       onChanged: (date) {},
       onConfirm: (date) {
+        // Provjeri da li je odabrani datum danas
+        bool isToday =
+            date.year == now.year &&
+            date.month == now.month &&
+            date.day == now.day;
+
         String selectedDay = DateFormat('EEEE').format(date);
         if (!_workingDays.contains(selectedDay)) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -249,7 +280,7 @@ class _BookingScreenState extends State<BookingScreen> {
         setState(() {
           _selectedDate = date;
         });
-        _showTimePicker();
+        _showTimePicker(isToday: isToday, currentTime: currentTime);
       },
       currentTime: DateTime.now(),
       locale: picker.LocaleType.hr,
@@ -271,19 +302,22 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  void _showTimePicker() async {
+  void _showTimePicker({bool isToday = false, TimeOfDay? currentTime}) async {
     List<String> hours = _workingHours.split(' - ');
     TimeOfDay startTime = _parseTime(hours[0]);
     TimeOfDay endTime = _parseTime(hours[1]);
 
     List<String> timeSlots = [];
-    TimeOfDay currentTime = startTime;
+    TimeOfDay currentSlot = startTime;
 
-    while (currentTime.hour < endTime.hour ||
-        (currentTime.hour == endTime.hour &&
-            currentTime.minute < endTime.minute)) {
-      timeSlots.add(_formatTime(currentTime));
-      currentTime = _addMinutes(currentTime, 30);
+    while (currentSlot.hour < endTime.hour ||
+        (currentSlot.hour == endTime.hour &&
+            currentSlot.minute < endTime.minute)) {
+      // Ako je danas i vrijeme je u prošlosti, preskoči
+      if (!isToday || !_isTimeInPast(currentSlot, currentTime!)) {
+        timeSlots.add(_formatTime(currentSlot));
+      }
+      currentSlot = _addMinutes(currentSlot, 30);
     }
 
     List<String> bookedSlots = await _fetchBookedSlots();
@@ -320,51 +354,64 @@ class _BookingScreenState extends State<BookingScreen> {
               ),
               const SizedBox(height: 10),
               Expanded(
-                child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    childAspectRatio: 2.5,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                  ),
-                  itemCount: timeSlots.length,
-                  itemBuilder: (context, index) {
-                    bool isBooked = bookedSlots.contains(timeSlots[index]);
-                    return ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            isBooked ? Colors.grey : Colors.grey.shade100,
-                        foregroundColor:
-                            isBooked ? Colors.white : const Color(0xFF26A69A),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                child:
+                    timeSlots.isEmpty
+                        ? const Center(
+                          child: Text('Nema dostupnih termina za odabrani dan'),
+                        )
+                        : GridView.builder(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                childAspectRatio: 2.5,
+                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 10,
+                              ),
+                          itemCount: timeSlots.length,
+                          itemBuilder: (context, index) {
+                            bool isBooked = bookedSlots.contains(
+                              timeSlots[index],
+                            );
+                            return ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    isBooked
+                                        ? Colors.grey
+                                        : Colors.grey.shade100,
+                                foregroundColor:
+                                    isBooked
+                                        ? Colors.white
+                                        : const Color(0xFF26A69A),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                elevation: 0,
+                              ),
+                              onPressed:
+                                  isBooked
+                                      ? null
+                                      : () {
+                                        List<String> parts = timeSlots[index]
+                                            .split(':');
+                                        int hour = int.parse(parts[0]);
+                                        int minute = int.parse(
+                                          parts[1].split(' ')[0],
+                                        );
+                                        setState(() {
+                                          _selectedTime = TimeOfDay(
+                                            hour: hour,
+                                            minute: minute,
+                                          );
+                                        });
+                                        Navigator.pop(context);
+                                      },
+                              child: Text(
+                                timeSlots[index],
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            );
+                          },
                         ),
-                        elevation: 0,
-                      ),
-                      onPressed:
-                          isBooked
-                              ? null
-                              : () {
-                                List<String> parts = timeSlots[index].split(
-                                  ':',
-                                );
-                                int hour = int.parse(parts[0]);
-                                int minute = int.parse(parts[1].split(' ')[0]);
-                                setState(() {
-                                  _selectedTime = TimeOfDay(
-                                    hour: hour,
-                                    minute: minute,
-                                  );
-                                });
-                                Navigator.pop(context);
-                              },
-                      child: Text(
-                        timeSlots[index],
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    );
-                  },
-                ),
               ),
             ],
           ),
@@ -410,6 +457,16 @@ class _BookingScreenState extends State<BookingScreen> {
   TimeOfDay _addMinutes(TimeOfDay time, int minutes) {
     int totalMinutes = time.hour * 60 + time.minute + minutes;
     return TimeOfDay(hour: totalMinutes ~/ 60, minute: totalMinutes % 60);
+  }
+
+  // Pomoćna metoda za provjeru da li je vrijeme u prošlosti
+  bool _isTimeInPast(TimeOfDay slotTime, TimeOfDay currentTime) {
+    if (slotTime.hour < currentTime.hour) return true;
+    if (slotTime.hour == currentTime.hour &&
+        slotTime.minute <= currentTime.minute) {
+      return true;
+    }
+    return false;
   }
 
   @override
@@ -622,7 +679,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                         }).toList(),
                                     onChanged: (value) {
                                       setState(() {
-                                        _selectedWorker = value as String?;
+                                        _selectedWorker = value;
                                       });
                                     },
                                     decoration: InputDecoration(

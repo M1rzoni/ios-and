@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:frizerski_salon/screens/login_screen.dart';
 import 'package:path/path.dart' as path;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:typed_data';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -24,6 +26,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _phoneController;
   late TextEditingController _passwordController;
   File? _profileImage;
+  Uint8List? _webImage;
   String? _profileImageUrl;
   bool _isEditing = false;
   bool _isImageUploading = false;
@@ -64,10 +67,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
       if (pickedFile != null) {
         setState(() {
-          _profileImage = File(pickedFile.path);
           _isImageUploading = true;
         });
-        await _uploadImage();
+
+        if (kIsWeb) {
+          // Web verzija - čitamo byteove direktno
+          final bytes = await pickedFile.readAsBytes();
+          setState(() {
+            _webImage = bytes;
+            _profileImage = File('dummy_path'); // Placeholder za web
+          });
+          await _uploadImage(bytes);
+        } else {
+          // Mobile verzija - koristimo File
+          setState(() {
+            _profileImage = File(pickedFile.path);
+          });
+          await _uploadImage();
+        }
       }
     } catch (e) {
       print('Error picking image: $e');
@@ -78,20 +95,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _uploadImage() async {
-    if (_profileImage == null) return;
-
+  Future<void> _uploadImage([Uint8List? webImage]) async {
     try {
-      // Create a reference with a proper path
-      final fileName = path.basename(_profileImage!.path);
-      final destination = 'profile_images/${_currentUser.uid}_$fileName';
+      // Kreiraj jedinstveni naziv fajla
+      final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final destination = 'profile_images/$fileName';
 
       final ref = FirebaseStorage.instance.ref(destination);
-      final uploadTask = ref.putFile(_profileImage!);
+      final metadata = SettableMetadata(contentType: 'image/jpeg');
 
-      final snapshot = await uploadTask.whenComplete(() {});
-      final downloadUrl = await snapshot.ref.getDownloadURL();
+      // Upload različito za web i mobile
+      if (kIsWeb && webImage != null) {
+        await ref.putData(webImage, metadata);
+      } else if (_profileImage != null) {
+        await ref.putFile(_profileImage!, metadata);
+      } else {
+        throw Exception('No image selected');
+      }
 
+      // Dobijanje download URL-a
+      final downloadUrl = await ref.getDownloadURL();
+
+      // Ažuriranje u Firestore
       await _firestore.collection('users').doc(_currentUser.uid).update({
         'profileImageUrl': downloadUrl,
       });
@@ -198,11 +223,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             0xFF26A69A,
                           ).withOpacity(0.2),
                           backgroundImage:
-                              _profileImage != null
-                                  ? FileImage(_profileImage!)
-                                  : (_profileImageUrl != null
-                                      ? NetworkImage(_profileImageUrl!)
-                                      : null),
+                              (_webImage != null && kIsWeb)
+                                  ? MemoryImage(_webImage!)
+                                  : (_profileImage != null
+                                      ? FileImage(_profileImage!)
+                                      : (_profileImageUrl != null
+                                          ? NetworkImage(_profileImageUrl!)
+                                          : null)),
                           child:
                               _profileImage == null && _profileImageUrl == null
                                   ? const Icon(
