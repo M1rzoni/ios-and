@@ -41,48 +41,53 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyC89OJSutb4Ae3KkfsF4KBAhlqCw8urPoI',
-    appId: '1:1090702313790:web:56da7841482d2101e5446f',
-    messagingSenderId: '1090702313790',
-    projectId: 'frizerskisalon-b34f6',
-    authDomain: 'frizerskisalon-b34f6.firebaseapp.com',
-    storageBucket: 'frizerskisalon-b34f6.firebasestorage.app',
-    measurementId: 'G-JGQW12PS52',
+    apiKey: 'AIzaSyBKjvmfNuMwkWjbs-s3KFbIHck0kz6ovZc',
+    appId: '1:911572902423:web:7d915ea75d59f27f937252',
+    messagingSenderId: '911572902423',
+    projectId: 'binaryteam-31798',
+    authDomain: 'binaryteam-31798.firebaseapp.com',
+    databaseURL: 'https://binaryteam-31798-default-rtdb.firebaseio.com',
+    storageBucket: 'binaryteam-31798.appspot.com',
+    measurementId: 'G-HCLKY6G5ZW',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBqmdXbPD1vBeX6PIMxke70uDBRPaYu1GI',
-    appId: '1:1090702313790:android:379dd323221a0a80e5446f',
-    messagingSenderId: '1090702313790',
-    projectId: 'frizerskisalon-b34f6',
-    storageBucket: 'frizerskisalon-b34f6.firebasestorage.app',
+    apiKey: 'AIzaSyCipmvkcu2xp0XMO2vMCrOMSrsA9rQPhrc',
+    appId: '1:911572902423:android:88a59a70af1999d9937252',
+    messagingSenderId: '911572902423',
+    projectId: 'binaryteam-31798',
+    databaseURL: 'https://binaryteam-31798-default-rtdb.firebaseio.com',
+    storageBucket: 'binaryteam-31798.appspot.com',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCuWZLhxUJ4yWDnM0f7Rzki0Jkx-76amzI',
-    appId: '1:1090702313790:ios:fbe6d05f5327402ae5446f',
-    messagingSenderId: '1090702313790',
-    projectId: 'frizerskisalon-b34f6',
-    storageBucket: 'frizerskisalon-b34f6.firebasestorage.app',
+    apiKey: 'AIzaSyBisd5kZlPLrMXu_gR6w6PMvrH09qmah8M',
+    appId: '1:911572902423:ios:b7285a6fb9aab611937252',
+    messagingSenderId: '911572902423',
+    projectId: 'binaryteam-31798',
+    databaseURL: 'https://binaryteam-31798-default-rtdb.firebaseio.com',
+    storageBucket: 'binaryteam-31798.appspot.com',
     iosBundleId: 'com.example.frizerskiSalon',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCuWZLhxUJ4yWDnM0f7Rzki0Jkx-76amzI',
-    appId: '1:1090702313790:ios:fbe6d05f5327402ae5446f',
-    messagingSenderId: '1090702313790',
-    projectId: 'frizerskisalon-b34f6',
-    storageBucket: 'frizerskisalon-b34f6.firebasestorage.app',
+    apiKey: 'AIzaSyBisd5kZlPLrMXu_gR6w6PMvrH09qmah8M',
+    appId: '1:911572902423:ios:b7285a6fb9aab611937252',
+    messagingSenderId: '911572902423',
+    projectId: 'binaryteam-31798',
+    databaseURL: 'https://binaryteam-31798-default-rtdb.firebaseio.com',
+    storageBucket: 'binaryteam-31798.appspot.com',
     iosBundleId: 'com.example.frizerskiSalon',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyC89OJSutb4Ae3KkfsF4KBAhlqCw8urPoI',
-    appId: '1:1090702313790:web:4e3f4e45d65f2836e5446f',
-    messagingSenderId: '1090702313790',
-    projectId: 'frizerskisalon-b34f6',
-    authDomain: 'frizerskisalon-b34f6.firebaseapp.com',
-    storageBucket: 'frizerskisalon-b34f6.firebasestorage.app',
-    measurementId: 'G-LK92645ZPE',
+    apiKey: 'AIzaSyBKjvmfNuMwkWjbs-s3KFbIHck0kz6ovZc',
+    appId: '1:911572902423:web:925ff35e3abeb2e9937252',
+    messagingSenderId: '911572902423',
+    projectId: 'binaryteam-31798',
+    authDomain: 'binaryteam-31798.firebaseapp.com',
+    databaseURL: 'https://binaryteam-31798-default-rtdb.firebaseio.com',
+    storageBucket: 'binaryteam-31798.appspot.com',
+    measurementId: 'G-00BS7EJTX0',
   );
 }

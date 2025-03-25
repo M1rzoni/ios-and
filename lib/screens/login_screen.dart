@@ -19,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String errorMessage = "";
   bool rememberMe = false;
   bool _obscurePassword = true;
+  bool isDev = true;
 
   Future<void> _forgotPassword(BuildContext context) async {
     final String email = _emailController.text.trim();
@@ -236,7 +237,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     );
                                 if (user != null) {
                                   // Provjera da li je korisnik admin ili ima verificiran email
-                                  if (!user.emailVerified &&
+                                  if (!user.emailVerified && !isDev &&
                                       _emailController.text != 'admin') {
                                     setState(() {
                                       errorMessage =

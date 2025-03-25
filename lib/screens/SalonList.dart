@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:frizerski_salon/cities_list.dart';
@@ -6,6 +7,8 @@ import 'package:frizerski_salon/screens/login_screen.dart';
 import 'package:frizerski_salon/screens/profile_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'booking_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:http/http.dart' as http;
 
 class SalonListScreen extends StatefulWidget {
   const SalonListScreen({super.key});
@@ -107,6 +110,26 @@ class _SalonListScreenState extends State<SalonListScreen> {
     }
   }
 
+  Future<Icon> testImageDownload() async {
+    try {
+      final url = 'https://firebasestorage.googleapis.com/v0/b/binaryteam-31798.appspot.com/o/salon_logos%2F1742902410946.jpg?alt=media&token=8f7ca908-c9a3-4b81-9750-87007c787920';
+
+      // 1. Provera HEAD zahtjeva
+      final headResponse = await http.head(Uri.parse(url));
+      print('HEAD Response - Status: ${headResponse.statusCode}');
+      print('Headers: ${headResponse.headers}');
+
+      // 2. Provera GET zahtjeva
+      final getResponse = await http.get(Uri.parse(url));
+      print('GET Response - Status: ${getResponse.statusCode}');
+      print('Content-Length: ${getResponse.bodyBytes.length} bytes');
+
+    } catch (e) {
+      print('HTTP Request Error: $e');
+    }
+    return const Icon(Icons.error);
+  }
+
   // Funkcija za promjenu taba
   void _onTabSelected(int index) {
     setState(() {
@@ -143,6 +166,7 @@ class _SalonListScreenState extends State<SalonListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text(
           "Frizerski saloni",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -450,27 +474,50 @@ class _SalonListScreenState extends State<SalonListScreen> {
                                 width: 60,
                                 height: 60,
                                 decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFF26A69A,
-                                  ).withOpacity(0.1),
+                                  color: const Color(0xFF26A69A).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(15),
                                 ),
-                                child:
-                                    logoUrl != null
-                                        ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            15,
-                                          ),
-                                          child: Image.network(
-                                            logoUrl,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        )
-                                        : const Icon(
-                                          Icons.store,
-                                          color: Color(0xFF26A69A),
-                                          size: 30,
-                                        ),
+                                child: FutureBuilder(
+                                  future: FirebaseStorage.instance
+                                      .ref('salon_logos/1742902410946.jpg')
+                                      .getDownloadURL(),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState == ConnectionState.waiting) {
+                                      return const Center(child: CircularProgressIndicator());
+                                    }
+
+                                    if (snapshot.hasError) {
+                                      print('Error getting download URL: ${snapshot.error}');
+                                      return const Icon(Icons.error);
+                                    }
+
+                                    if (snapshot.hasData) {
+                                      final url = snapshot.data!;
+                                      print('Using image URL: $url');
+
+                                      return Image.network(
+                                        url,
+                                        fit: BoxFit.cover,
+                                        loadingBuilder: (context, child, progress) {
+                                          if (progress == null) return child;
+                                          return Center(
+                                            child: CircularProgressIndicator(
+                                              value: progress.expectedTotalBytes != null
+                                                  ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                                                  : null,
+                                            ),
+                                          );
+                                        },
+                                        errorBuilder: (context, error, stackTrace) {
+                                          print('Image load error: $error');
+                                          return const Icon(Icons.broken_image);
+                                        },
+                                      );
+                                    }
+
+                                    return const Icon(Icons.store);
+                                  },
+                                ),
                               ),
                               const SizedBox(width: 16),
                               // Salon Details
