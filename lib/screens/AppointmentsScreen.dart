@@ -55,6 +55,22 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     }
   }
 
+  String _formatTimeTo24(String time12h) {
+    try {
+      // Ako je već u 24-satnom formatu, vrati isto
+      if (time12h.contains(RegExp(r'^[0-9]{1,2}:[0-9]{2}$'))) {
+        return time12h;
+      }
+
+      final format = DateFormat('h:mm a');
+      DateTime dateTime = format.parse(time12h);
+      return DateFormat('HH:mm').format(dateTime);
+    } catch (e) {
+      print('Error formatting time: $e');
+      return time12h; // Vrati original ako ne uspije parsiranje
+    }
+  }
+
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -224,7 +240,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
               SizedBox(height: 10),
               _buildDetailRow('Ime na rezervaciji:', appointment['ime']),
               _buildDetailRow('Datum:', appointment['datum']),
-              _buildDetailRow('Vrijeme:', appointment['vrijeme']),
+              _buildDetailRow('Vrijeme:', _formatTimeTo24(appointment['vrijeme'])),
               _buildDetailRow('Frizerski radnik:', appointment['worker'] ?? 'Nepoznato'),
               _buildDetailRow('Cijena:', '${appointment['cijena'] ?? 'Nepoznato'} KM'),
 
@@ -485,7 +501,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '${appointment['datum']} u ${appointment['vrijeme']}',
+                                    '${appointment['datum']} u ${_formatTimeTo24(appointment['vrijeme'])}',
                                     style: const TextStyle(fontSize: 14),
                                   ),
                                   if (appointment['worker'] != null)

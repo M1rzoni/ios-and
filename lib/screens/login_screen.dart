@@ -220,7 +220,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: ElevatedButton(
                             onPressed: () async {
                               if (_emailController.text == 'admin' &&
-                                  _passwordController.text == 'admin') {
+                                  _passwordController.text == 'DzenoMirza1322') {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -306,7 +306,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                             ),
-                            child: const Text('Prijavi se'),
+                            child: const Text('Prijava'),
                           ),
                         ),
                       ],
@@ -343,50 +343,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            icon: Icon(Icons.g_mobiledata, size: 24),
-                            onPressed: () async {
-                              User? user =
-                                  await _authService.signInWithGoogle();
-                              if (user != null) {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => const SalonListScreen(),
-                                  ),
-                                );
-                              }
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 20),
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            icon: Icon(Icons.apple, size: 24),
-                            onPressed: () {
-                              // Add Apple sign in functionality here
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
                     if (errorMessage.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.all(8.0),

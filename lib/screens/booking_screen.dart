@@ -442,15 +442,24 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   TimeOfDay _parseTime(String time) {
-    final format = DateFormat('h:mm a');
-    DateTime dateTime = format.parse(time);
-    return TimeOfDay.fromDateTime(dateTime);
+    // Provjeri da li je u 12-satnom formatu (sadrži AM/PM)
+    if (time.toLowerCase().contains('am') || time.toLowerCase().contains('pm')) {
+      final format = DateFormat('h:mm a');
+      DateTime dateTime = format.parse(time);
+      return TimeOfDay.fromDateTime(dateTime);
+    } else {
+      // Ako je u 24-satnom formatu
+      List<String> parts = time.split(':');
+      int hour = int.parse(parts[0]);
+      int minute = int.parse(parts[1]);
+      return TimeOfDay(hour: hour, minute: minute);
+    }
   }
 
   String _formatTime(TimeOfDay time) {
     final now = DateTime.now();
     final dt = DateTime(now.year, now.month, now.day, time.hour, time.minute);
-    final format = DateFormat('h:mm a');
+    final format = DateFormat('HH:mm'); // Promijenjeno u 24-satni format
     return format.format(dt);
   }
 
@@ -806,10 +815,9 @@ class _BookingScreenState extends State<BookingScreen> {
                                 const Icon(Icons.calendar_today, size: 20),
                                 const SizedBox(width: 8),
                                 Text(
-                                  (_selectedDate == null ||
-                                          _selectedTime == null)
+                                  (_selectedDate == null || _selectedTime == null)
                                       ? 'Odaberite datum i vrijeme'
-                                      : '${DateFormat('dd.MM.yyyy').format(_selectedDate!)} - ${_selectedTime!.format(context)}',
+                                      : '${DateFormat('dd.MM.yyyy').format(_selectedDate!)} - ${_formatTime(_selectedTime!)}', // Koristite _formatTime umjesto _selectedTime!.format(context)
                                   style: const TextStyle(fontSize: 16),
                                 ),
                               ],
