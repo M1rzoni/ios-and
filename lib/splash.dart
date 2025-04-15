@@ -1,11 +1,8 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lottie/lottie.dart';
 
 class Splash extends StatefulWidget {
   const Splash({super.key});
@@ -19,18 +16,7 @@ class _SplashState extends State<Splash> {
   void initState() {
     super.initState();
 
-    // Postavljanje status bara na providan
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-      ),
-    );
 
-    // Fullscreen mod
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-
-    // Timer za navigaciju
     Timer(const Duration(seconds: 3), () {
       if (mounted) {
         final user = FirebaseAuth.instance.currentUser;
@@ -42,84 +28,43 @@ class _SplashState extends State<Splash> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
+      backgroundColor: const Color(0xFFF5F5F5), // Svijetlo bijela/siva pozadina
       body: Stack(
-        fit: StackFit.expand,
         children: [
-          // Animirana pozadina
-          Lottie.asset('assets/lottie/animation2.json', fit: BoxFit.cover),
-
-          // Tamni overlay za bolji kontrast
-          Container(color: Colors.black.withOpacity(0.4)),
-
-          // Efekat zamagljenog stakla
+          // Logo na sredini
           Center(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Container(
-                  width: 320,
-                  padding: const EdgeInsets.all(25),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.3)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.25),
-                        blurRadius: 20,
-                        spreadRadius: 3,
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Logo aplikacije
-                      Image.asset(
-                        'assets/icons/logo.png', // Putanja do vašeg logoa
-                        height: 180, // Prilagodite visinu po potrebi
-                        width: 180, // Prilagodite širinu po potrebi
-                        fit: BoxFit.contain,
-                      ),
-                      const SizedBox(height: 15),
+            child: Image.asset(
+              'assets/icons/logo.png',
+              height: 220, // Povećan logo
+              width: 220,
+              fit: BoxFit.contain,
+            ),
+          ),
 
-                      // Naslov aplikacije
-                      Text(
-                        "SalonTime",
-                        style: GoogleFonts.roboto(
-                          fontSize: 36,
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(
-                              blurRadius: 10,
-                              color: Colors.black.withOpacity(0.3),
-                              offset: const Offset(2, 2),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-
-                      // Slogan
-                      Text(
-                        "Brže do savršenog izgleda",
-                        style: GoogleFonts.montserrat(
-                          fontSize: 18,
-                          color: Colors.white.withOpacity(0.8),
-                        ),
-                      ),
-                      const SizedBox(height: 50),
-
-                      // Loading indikator
-                      CircularProgressIndicator(
-                        color: Colors.white.withOpacity(0.8),
-                      ),
-                    ],
+          // Tekst pri dnu ekrana
+          Positioned(
+            bottom: MediaQuery.of(context).size.height * 0.15,
+            left: 0,
+            right: 0,
+            child: Column(
+              children: [
+                Text(
+                  "SalonTime",
+                  style: GoogleFonts.roboto(
+                    fontSize: 36,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
+                const SizedBox(height: 8),
+                Text(
+                  "Brže do savršenog izgleda",
+                  style: GoogleFonts.montserrat(
+                    fontSize: 16,
+                    color: Colors.black54,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
