@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:frizerski_salon/screens/login_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:frizerski_salon/cities_list.dart';
 import 'package:frizerski_salon/screens/profile_screen.dart';
@@ -148,16 +149,12 @@ class _SalonListScreenState extends State<SalonListScreen> {
     }).toList();
   }
 
-  Future<void> _logout(BuildContext context) async {
-    try {
-      await FirebaseAuth.instance.signOut();
-      context.go('/login');
-    } catch (e) {
-      print('Error during logout: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Došlo je do greške prilikom odjave: $e')),
-      );
-    }
+  void _logout(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => LoginScreen()),
+    );
   }
 
   @override
@@ -183,10 +180,8 @@ class _SalonListScreenState extends State<SalonListScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await _logout(context);
-            },
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () => _logout(context),
           ),
         ],
       ),

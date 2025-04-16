@@ -60,21 +60,52 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   void _fetchSalonDetails() async {
-    try {
-      DocumentSnapshot salonSnapshot =
-          await FirebaseFirestore.instance
-              .collection('saloni')
-              .doc(widget.idSalona)
-              .get();
+  try {
+    DocumentSnapshot salonSnapshot = await FirebaseFirestore.instance
+        .collection('saloni')
+        .doc(widget.idSalona)
+        .get();
 
-      if (salonSnapshot.exists) {
-        setState(() {
-          _workingDays = List<String>.from(salonSnapshot['workingDays'] ?? []);
-          _workingHours = salonSnapshot['workingHours'] ?? '10:00 AM - 6:00 PM';
-        });
+    if (salonSnapshot.exists) {
+      // Konvertujemo radno vrijeme u 24-satni format
+      String workingHours12h = salonSnapshot['workingHours'] ?? '10:00 AM - 6:00 PM';
+      String workingHours24h = _convertTo24HourFormat(workingHours12h);
+
+      setState(() {
+        _workingDays = List<String>.from(salonSnapshot['workingDays'] ?? []);
+        _workingHours = workingHours24h; // Spremamo u 24-satnom formatu
+      });
+    }
+  } catch (e) {
+    print('Error fetching salon details: $e');
+    }
+  }
+
+  String _convertTo24HourFormat(String time12h) {
+    try {
+      // Očistimo string od nepotrebnih znakova
+      String cleanedTime = time12h
+          .replaceAll(' ', ' ')
+          .trim();
+
+      List<String> parts = cleanedTime.split(' - ');
+      if (parts.length != 2) return time12h;
+
+      String startTime12h = parts[0];
+      String endTime12h = parts[1];
+
+      // Funkcija za konverziju pojedinačnog vremena
+      String convertSingleTime(String time12h) {
+        final format12h = DateFormat('h:mm a');
+        final format24h = DateFormat('HH:mm');
+        DateTime dateTime = format12h.parse(time12h.trim());
+        return format24h.format(dateTime);
       }
+
+      return '${convertSingleTime(startTime12h)} - ${convertSingleTime(endTime12h)}';
     } catch (e) {
-      print('Error fetching salon details: $e');
+      print('Error converting time format: $e');
+      return time12h;
     }
   }
 
@@ -442,25 +473,41 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   TimeOfDay _parseTime(String time) {
-    // Provjeri da li je u 12-satnom formatu (sadrži AM/PM)
-    if (time.toLowerCase().contains('am') || time.toLowerCase().contains('pm')) {
-      final format = DateFormat('h:mm a');
-      DateTime dateTime = format.parse(time);
-      return TimeOfDay.fromDateTime(dateTime);
-    } else {
-      // Ako je u 24-satnom formatu
-      List<String> parts = time.split(':');
-      int hour = int.parse(parts[0]);
-      int minute = int.parse(parts[1]);
-      return TimeOfDay(hour: hour, minute: minute);
+    try {
+      // Prvo očistimo string od nepotrebnih znakova
+      String cleanedTime = time
+          .replaceAll(' ', ' ') // Zamjena specijalnog razmaka sa običnim razmakom
+          .trim(); // Uklanjanje praznina sa početka i kraja
+
+      // Provjeravamo da li je u 12-satnom formatu (sadrži AM/PM)
+      if (cleanedTime.toLowerCase().contains('am') || cleanedTime.toLowerCase().contains('pm')) {
+        final format = DateFormat('h:mm a');
+        DateTime dateTime = format.parse(cleanedTime);
+        return TimeOfDay.fromDateTime(dateTime);
+      } else {
+        // Ako je u 24-satnom formatu
+        // Uklanjamo sve ne-brojčane znakove osim dvotačke
+        String numbersOnly = cleanedTime.replaceAll(RegExp(r'[^0-9:]'), '');
+        List<String> parts = numbersOnly.split(':');
+        
+        if (parts.length != 2) {
+          throw FormatException('Invalid time format: $time');
+        }
+        
+        int hour = int.parse(parts[0]);
+        int minute = int.parse(parts[1]);
+        
+        return TimeOfDay(hour: hour, minute: minute);
+      }
+    } catch (e) {
+      print('Error parsing time: $time, error: $e');
+      // Vraćamo podrazumijevano vrijeme u slučaju greške
+      return TimeOfDay(hour: 10, minute: 0);
     }
   }
 
   String _formatTime(TimeOfDay time) {
-    final now = DateTime.now();
-    final dt = DateTime(now.year, now.month, now.day, time.hour, time.minute);
-    final format = DateFormat('HH:mm'); // Promijenjeno u 24-satni format
-    return format.format(dt);
+  return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
   TimeOfDay _addMinutes(TimeOfDay time, int minutes) {

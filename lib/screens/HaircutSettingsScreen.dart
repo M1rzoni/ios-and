@@ -373,7 +373,7 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
                     ),
                     child: Text(
                       _openingTime != null
-                          ? 'Otvaranje: ${_openingTime!.format(context)}'
+                          ? '${_openingTime!.format(context)}'
                           : 'Odaberite vrijeme otvaranja',
                     ),
                   ),
@@ -388,7 +388,7 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
                     ),
                     child: Text(
                       _closingTime != null
-                          ? 'Zatvaranje: ${_closingTime!.format(context)}'
+                          ? '${_closingTime!.format(context)}'
                           : 'Odaberite vrijeme zatvaranja',
                     ),
                   ),
@@ -874,44 +874,23 @@ class _HaircutSettingsScreenState extends State<HaircutSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false, // jer koristiš custom leading
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          "Postavke salona",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: const Color(0xFF26A69A),
+        elevation: 0,
+      ),
       body: Container(
         child: SafeArea(
           child: Column(
             children: [
-              // Custom AppBar
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFF26A69A), // Teal
-                      Color(0xFF80CBC4), // Lighter teal
-                    ],
-                  ),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Postavke salona',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(

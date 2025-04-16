@@ -62,6 +62,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _logout(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => LoginScreen()),
+    );
+  }
+
   Future<void> _pickImage() async {
     try {
       final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
@@ -71,15 +79,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
 
         if (kIsWeb) {
-          // Web verzija - čitamo byteove direktno
           final bytes = await pickedFile.readAsBytes();
           setState(() {
             _webImage = bytes;
-            _profileImage = File('dummy_path'); // Placeholder za web
+            _profileImage = File('dummy_path');
           });
           await _uploadImage(bytes);
         } else {
-          // Mobile verzija - koristimo File
           setState(() {
             _profileImage = File(pickedFile.path);
           });
@@ -97,14 +103,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _uploadImage([Uint8List? webImage]) async {
     try {
-      // Kreiraj jedinstveni naziv fajla
       final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final destination = 'profile_images/$fileName';
 
       final ref = FirebaseStorage.instance.ref(destination);
       final metadata = SettableMetadata(contentType: 'image/jpeg');
 
-      // Upload različito za web i mobile
       if (kIsWeb && webImage != null) {
         await ref.putData(webImage, metadata);
       } else if (_profileImage != null) {
@@ -113,10 +117,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         throw Exception('No image selected');
       }
 
-      // Dobijanje download URL-a
       final downloadUrl = await ref.getDownloadURL();
 
-      // Ažuriranje u Firestore
       await _firestore.collection('users').doc(_currentUser.uid).update({
         'profileImageUrl': downloadUrl,
       });
@@ -136,18 +138,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _updateProfile() async {
     try {
-      // Update name and phone in Firestore
       await _firestore.collection('users').doc(_currentUser.uid).update({
         'fullName': _nameController.text,
         'phoneNumber': _phoneController.text,
       });
 
-      // Update email in Firebase Auth if changed
       if (_emailController.text != _currentUser.email) {
         await _currentUser.updateEmail(_emailController.text);
       }
 
-      // Update password if not empty
       if (_passwordController.text.isNotEmpty) {
         await _currentUser.updatePassword(_passwordController.text);
       }
@@ -157,12 +156,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _errorMessage = '';
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully')),
+        const SnackBar(
+          content: Text('Profile updated successfully'),
+          backgroundColor: Color(0xFF26A69A),
+        ),
       );
     } catch (e) {
       setState(() {
         _errorMessage = 'Error updating profile: $e';
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -178,9 +186,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      
       appBar: AppBar(
-        title: const Text('My Profile'),
+        title: const Text('Moj Profil'),
         backgroundColor: const Color(0xFF26A69A),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
             icon: Icon(_isEditing ? Icons.save : Icons.edit),
@@ -196,108 +209,159 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Stack(
-                children: [
-                  _isImageUploading
-                      ? Container(
-                        width: 100,
-                        height: 100,
-                        alignment: Alignment.center,
-                        child: const CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Color(0xFF26A69A),
-                          ),
-                        ),
-                      )
-                      : GestureDetector(
-                        onTap: _isEditing ? _pickImage : null,
-                        child: CircleAvatar(
-                          radius: 50,
-                          backgroundColor: const Color(
-                            0xFF26A69A,
-                          ).withOpacity(0.2),
-                          backgroundImage:
-                              (_webImage != null && kIsWeb)
-                                  ? MemoryImage(_webImage!)
-                                  : (_profileImage != null
-                                      ? FileImage(_profileImage!)
-                                      : (_profileImageUrl != null
-                                          ? NetworkImage(_profileImageUrl!)
-                                          : null)),
-                          child:
-                              _profileImage == null && _profileImageUrl == null
-                                  ? const Icon(
-                                    Icons.person,
-                                    size: 50,
-                                    color: Color(0xFF26A69A),
-                                  )
-                                  : null,
-                        ),
-                      ),
-                  if (_isEditing)
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF26A69A),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: const Icon(
-                            Icons.camera_alt,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                          onPressed: _pickImage,
-                        ),
-                      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF26A69A), Color(0xFF80CBC4)],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30),
                     ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            _buildEditableField('Full Name', _nameController, Icons.person),
-            _buildEditableField('Email', _emailController, Icons.email),
-            _buildEditableField('Phone Number', _phoneController, Icons.phone),
-            if (_isEditing)
-              _buildEditableField(
-                'New Password',
-                _passwordController,
-                Icons.lock,
-                isPassword: true,
-              ),
-            if (_errorMessage.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                child: Text(
-                  _errorMessage,
-                  style: const TextStyle(color: Colors.red),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 20),
+                        Center(
+                          child: Stack(
+                            children: [
+                              _isImageUploading
+                                  ? Container(
+                                    width: 100,
+                                    height: 100,
+                                    alignment: Alignment.center,
+                                    child: const CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Color(0xFF26A69A),
+                                      ),
+                                    ),
+                                  )
+                                  : GestureDetector(
+                                    onTap: _isEditing ? _pickImage : null,
+                                    child: CircleAvatar(
+                                      radius: 50,
+                                      backgroundColor: const Color(0xFF26A69A).withOpacity(0.2),
+                                      backgroundImage:
+                                          (_webImage != null && kIsWeb)
+                                              ? MemoryImage(_webImage!)
+                                              : (_profileImage != null
+                                                  ? FileImage(_profileImage!)
+                                                  : (_profileImageUrl != null
+                                                      ? NetworkImage(_profileImageUrl!)
+                                                      : null)),
+                                      child:
+                                          _profileImage == null && _profileImageUrl == null
+                                              ? const Icon(
+                                                Icons.person,
+                                                size: 50,
+                                                color: Color(0xFF26A69A),
+                                              )
+                                              : null,
+                                    ),
+                                  ),
+                              if (_isEditing)
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF26A69A),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: IconButton(
+                                      icon: const Icon(
+                                        Icons.camera_alt,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                      onPressed: _pickImage,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+                        _buildEditableField('Ime i prezime', _nameController, Icons.person),
+                        const SizedBox(height: 20),
+                        _buildEditableField('Email', _emailController, Icons.email),
+                        const SizedBox(height: 20),
+                        _buildEditableField('Broj telefona', _phoneController, Icons.phone),
+                        const SizedBox(height: 20),
+                        if (_isEditing)
+                          _buildEditableField(
+                            'Nova lozinka',
+                            _passwordController,
+                            Icons.lock,
+                            isPassword: true,
+                          ),
+                        if (_errorMessage.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16.0),
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade100,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.error, color: Colors.red),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _errorMessage,
+                                      style: const TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 30),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: () => _logout(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'Odjava',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () async {
-                await _auth.signOut();
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                  (route) => false,
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                minimumSize: const Size(double.infinity, 50),
-              ),
-              child: const Text('Logout'),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -309,20 +373,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
     IconData icon, {
     bool isPassword = false,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon),
-          border: const OutlineInputBorder(),
-          enabled: _isEditing,
-          suffixIcon: isPassword ? const Icon(Icons.visibility_off) : null,
-        ),
-        obscureText: isPassword,
-        keyboardType:
-            label == 'Phone Number' ? TextInputType.phone : TextInputType.text,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF26A69A),
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+            ),
+          ),
+          TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              hintText: 'Unesite $label',
+              hintStyle: TextStyle(color: Colors.grey.shade400),
+              prefixIcon: Icon(icon, color: const Color(0xFF26A69A)),
+              suffixIcon: isPassword
+                  ? IconButton(
+                      icon: const Icon(Icons.visibility_off, color: Color(0xFF26A69A)),
+                      onPressed: () {},
+                    )
+                  : null,
+            ),
+            obscureText: isPassword,
+            enabled: _isEditing,
+            keyboardType:
+                label == 'Broj telefona' ? TextInputType.phone : TextInputType.text,
+          ),
+        ],
       ),
     );
   }
