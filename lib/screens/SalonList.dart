@@ -8,6 +8,8 @@ import 'package:frizerski_salon/screens/profile_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'booking_screen.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SalonListScreen extends StatefulWidget {
   const SalonListScreen({super.key});
@@ -19,20 +21,20 @@ class SalonListScreen extends StatefulWidget {
 class _SalonListScreenState extends State<SalonListScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  List<String> _favoritedSalons = []; // Lista ID-jeva lajkovanih salona
-  int _selectedTabIndex = 0; // 0: Following, 1: Popular, 2: Recent
+  List<String> _favoritedSalons = [];
+  int _selectedTabIndex = 0;
   String? _selectedCity;
+  int _currentBottomIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadFavoritedSalons(); // Učitaj lajkovane salone prilikom učitavanja ekrana
+    _loadFavoritedSalons();
   }
 
-  // Funkcija za učitavanje lajkovanih salona iz Firestore-a
   Future<void> _loadFavoritedSalons() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return; // Ako korisnik nije prijavljen, ne radi ništa
+    if (user == null) return;
 
     final userId = user.uid;
     final favoritedSalons = await getFavoritedSalons(userId);
@@ -41,14 +43,10 @@ class _SalonListScreenState extends State<SalonListScreen> {
     });
   }
 
-  // Funkcija za dohvaćanje lajkovanih salona iz korisničkog dokumenta
   Future<List<String>> getFavoritedSalons(String userId) async {
     try {
       DocumentSnapshot<Map<String, dynamic>> userDoc =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(userId)
-              .get();
+          await FirebaseFirestore.instance.collection('users').doc(userId).get();
 
       if (userDoc.exists) {
         List<dynamic> favorites = userDoc.data()?['favorites'] ?? [];
@@ -62,7 +60,6 @@ class _SalonListScreenState extends State<SalonListScreen> {
     }
   }
 
-  // Funkcija za ažuriranje lajkovanih salona u korisničkom dokumentu
   Future<void> updateFavoritedSalons(
     String userId,
     List<String> favoritedSalons,
@@ -76,32 +73,25 @@ class _SalonListScreenState extends State<SalonListScreen> {
     }
   }
 
-  // Funkcija za lajkanje/odlajkanje salona
   Future<void> _toggleFavorite(String salonId) async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return; // Ako korisnik nije prijavljen, ne radi ništa
+    if (user == null) return;
 
     final userId = user.uid;
 
     if (_favoritedSalons.contains(salonId)) {
-      // Odlajkaj: Ukloni salon iz liste lajkovanih
       setState(() {
         _favoritedSalons.remove(salonId);
       });
     } else {
-      // Lajkaj: Dodaj salon u listu lajkovanih
       setState(() {
         _favoritedSalons.add(salonId);
       });
     }
 
-    // Ažuriraj Firestore
     await updateFavoritedSalons(userId, _favoritedSalons);
 
-    // Ažuriraj broj lajkova u kolekciji saloni
-    final salonRef = FirebaseFirestore.instance
-        .collection('saloni')
-        .doc(salonId);
+    final salonRef = FirebaseFirestore.instance.collection('saloni').doc(salonId);
     if (_favoritedSalons.contains(salonId)) {
       await salonRef.update({'favorites': FieldValue.increment(1)});
     } else {
@@ -109,27 +99,6 @@ class _SalonListScreenState extends State<SalonListScreen> {
     }
   }
 
-  Future<Icon> testImageDownload() async {
-    try {
-      final url =
-          'https://firebasestorage.googleapis.com/v0/b/binaryteam-31798.appspot.com/o/salon_logos%2F1742902410946.jpg?alt=media&token=8f7ca908-c9a3-4b81-9750-87007c787920';
-
-      // 1. Provera HEAD zahtjeva
-      final headResponse = await http.head(Uri.parse(url));
-      print('HEAD Response - Status: ${headResponse.statusCode}');
-      print('Headers: ${headResponse.headers}');
-
-      // 2. Provera GET zahtjeva
-      final getResponse = await http.get(Uri.parse(url));
-      print('GET Response - Status: ${getResponse.statusCode}');
-      print('Content-Length: ${getResponse.bodyBytes.length} bytes');
-    } catch (e) {
-      print('HTTP Request Error: $e');
-    }
-    return const Icon(Icons.error);
-  }
-
-  // Funkcija za promjenu taba
   void _onTabSelected(int index) {
     setState(() {
       _searchQuery = '';
@@ -137,9 +106,7 @@ class _SalonListScreenState extends State<SalonListScreen> {
     });
   }
 
-  List<QueryDocumentSnapshot> _sortSalonsByCity(
-    List<QueryDocumentSnapshot> salons,
-  ) {
+  List<QueryDocumentSnapshot> _sortSalonsByCity(List<QueryDocumentSnapshot> salons) {
     if (_selectedCity == null) return salons;
 
     return salons.where((salon) {
@@ -157,37 +124,401 @@ class _SalonListScreenState extends State<SalonListScreen> {
     );
   }
 
+  void _showSalonDetails(Map<String, dynamic> salon) {
+    final address = salon['adresa'] ?? 'Nema adrese';
+    final encodedAddress = Uri.encodeComponent(address);
+    final mapUrl = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d22786.206229529515!2d18.606767956048003!3d44.4480160254353!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x475eb33e35e40b23%3A0x6a3fea2e9715234e!2sLaurus%20Motel!5e0!3m2!1sen!2sba!4v1744994964212!5m2!1sen!2sba';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Salon Header with Logo
+                _buildSalonHeader(salon),
+                
+                // Salon Details
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Basic Info
+                      _buildDetailRow(Icons.location_on, salon['adresa'] ?? 'Nema adrese'),
+                      _buildDetailRow(Icons.phone, salon['brojTelefona'] ?? 'Nema broja'),
+                      _buildDetailRow(Icons.person, 'Vlasnik: ${salon['vlasnik'] ?? 'Nepoznat'}'),
+                      _buildDetailRow(Icons.favorite, 'Omiljeni: ${salon['favorites'] ?? 0}'),
+                      
+                      // Working Days
+                      if (salon['workingDays'] != null && (salon['workingDays'] as List).isNotEmpty)
+                        _buildWorkingDays(salon['workingDays']),
+                      
+                      // Working Hours
+                      if (salon['workingHours'] != null)
+                        _buildWorkingHours(salon['workingHours']),
+                      
+                      // Employees
+                      if (salon['radnici'] != null && (salon['radnici'] as List).isNotEmpty)
+                        _buildEmployeesList(salon['radnici']),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Map Section
+                      if (address.isNotEmpty && address != 'Nema adrese')
+                        _buildMapSection(mapUrl, address),
+                      
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSalonHeader(Map<String, dynamic> salon) {
+    final logoUrl = salon['logoUrl'];
+    final isWideImage = logoUrl != null && (logoUrl.contains('wide') || logoUrl.contains('landscape'));
+    
+    return Stack(
+      children: [
+        if (isWideImage && logoUrl != null)
+          Container(
+            height: 180,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              image: DecorationImage(
+                image: NetworkImage(logoUrl),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            color: isWideImage ? Colors.black.withOpacity(0.4) : Colors.transparent,
+          ),
+          child: Row(
+            crossAxisAlignment: isWideImage ? CrossAxisAlignment.end : CrossAxisAlignment.center,
+            children: [
+              if (!isWideImage && logoUrl != null)
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.grey[100],
+                    image: DecorationImage(
+                      image: NetworkImage(logoUrl),
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              
+              if (!isWideImage) const SizedBox(width: 16),
+              
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      salon['naziv'] ?? 'Nepoznat salon',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: isWideImage ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    if (salon['grad'] != null)
+                      Text(
+                        salon['grad'],
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: isWideImage ? Colors.white.withOpacity(0.9) : Colors.grey[600],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Colors.teal.shade600),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 16, color: Colors.grey[800]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWorkingDays(List<dynamic> days) {
+    final bosnianDays = {
+      'Monday': 'Ponedjeljak',
+      'Tuesday': 'Utorak',
+      'Wednesday': 'Srijeda',
+      'Thursday': 'Četvrtak',
+      'Friday': 'Petak',
+      'Saturday': 'Subota',
+      'Sunday': 'Nedjelja',
+    };
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.calendar_today, size: 20, color: Colors.teal.shade600),
+              const SizedBox(width: 12),
+              Text(
+                'Radni dani:',
+                style: TextStyle(fontSize: 16, color: Colors.grey[800]),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: days.map((day) {
+              final bosnianDay = bosnianDays[day] ?? day;
+              return Chip(
+                label: Text(bosnianDay),
+                backgroundColor: Colors.teal.shade50,
+                labelStyle: TextStyle(color: Colors.teal.shade800),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWorkingHours(String hours) {
+    // Convert 12h to 24h format
+    String convertTo24Hour(String time12h) {
+      try {
+        final format12h = DateFormat('h:mm a');
+        final format24h = DateFormat('HH:mm');
+        final date = format12h.parse(time12h.replaceAll('.', ''));
+        return format24h.format(date);
+      } catch (e) {
+        return time12h; // Return original if conversion fails
+      }
+    }
+
+    final formattedHours = hours.split(' - ').map(convertTo24Hour).join(' - ');
+    
+    return _buildDetailRow(
+      Icons.access_time,
+      'Radno vrijeme: $formattedHours',
+    );
+  }
+
+  Widget _buildEmployeesList(List<dynamic> employees) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.people, size: 20, color: Colors.teal.shade600),
+              const SizedBox(width: 12),
+              Text(
+                'Radnici:',
+                style: TextStyle(fontSize: 16, color: Colors.grey[800]),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: employees.map((employee) {
+              return Chip(
+                label: Text(employee),
+                avatar: CircleAvatar(
+                  backgroundColor: Colors.teal.shade100,
+                  child: Text(
+                    employee.substring(0, 1),
+                    style: TextStyle(color: Colors.teal.shade800),
+                  ),
+                ),
+                backgroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: Colors.teal.shade100),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMapSection(String mapUrl, String address) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.map, size: 20, color: Colors.teal.shade600),
+            const SizedBox(width: 12),
+            Text(
+              'Lokacija:',
+              style: TextStyle(fontSize: 16, color: Colors.grey[800]),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          height: 200,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              'https://maps.googleapis.com/maps/api/staticmap?center=$address&zoom=15&size=600x300&maptype=roadmap&markers=color:red%7C$address&key=YOUR_API_KEY',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.map, size: 48, color: Colors.grey[400]),
+                      Text('Mapa nije dostupna', style: TextStyle(color: Colors.grey[600])),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: () async {
+              final url = 'https://www.google.com/maps/search/?api=1&query=$address';
+              if (await canLaunch(url)) {
+                await launch(url);
+              }
+            },
+            icon: Icon(Icons.open_in_new, size: 16),
+            label: Text('Otvori u Maps'),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.teal.shade600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSalonImage(String imageUrl) {
+    return Stack(
+      children: [
+        Container(color: Colors.white),
+        Center(
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.contain,
+            width: 70,
+            height: 70,
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return Center(
+                child: CircularProgressIndicator(
+                  value: progress.expectedTotalBytes != null
+                      ? progress.cumulativeBytesLoaded /
+                          progress.expectedTotalBytes!
+                      : null,
+                  color: Colors.teal.shade600,
+                  strokeWidth: 2,
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              return _buildPlaceholderIcon();
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlaceholderIcon() {
+    return Center(
+      child: Icon(
+        Icons.store,
+        size: 36,
+        color: Colors.grey[400],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text(
           "Frizerski saloni",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 22,
+          ),
         ),
-        backgroundColor: const Color(0xFF26A69A), // Teal color
+        backgroundColor: Colors.teal.shade600,
         elevation: 0,
+        centerTitle: false,
         iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ProfileScreen()),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () => _logout(context),
-          ),
-        ],
       ),
       body: Column(
         children: [
-          // Search Bar
+          // Search and Filter Section
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -196,10 +527,10 @@ class _SalonListScreenState extends State<SalonListScreen> {
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withOpacity(0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -209,14 +540,15 @@ class _SalonListScreenState extends State<SalonListScreen> {
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'Pretraži salone...',
-                      prefixIcon: const Icon(
+                      hintStyle: TextStyle(color: Colors.grey[500]),
+                      prefixIcon: Icon(
                         Icons.search,
-                        color: Color(0xFF26A69A),
+                        color: Colors.teal.shade600,
                       ),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
-                        vertical: 14,
+                        vertical: 16,
                       ),
                     ),
                     onChanged: (value) {
@@ -226,42 +558,38 @@ class _SalonListScreenState extends State<SalonListScreen> {
                     },
                   ),
                 ),
-                const SizedBox(
-                  height: 16,
-                ), // Razmak između search field-a i dropdown-a
-                // Dropdown za izbor grada
+                const SizedBox(height: 16),
+                // City Dropdown
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withOpacity(0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
                     ],
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
                     child: DropdownButtonFormField<String>(
                       value: _selectedCity,
                       decoration: InputDecoration(
-                        labelText: 'Izaberi grad',
-                        border: InputBorder.none, // Uklanjamo defaultni border
+                        labelText: 'Odaberi grad',
+                        labelStyle: TextStyle(color: Colors.grey[600]),
+                        border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
                           vertical: 16,
                         ),
                       ),
                       items: [
-                        // Dodajemo opciju za poništavanje izbora
                         const DropdownMenuItem<String>(
-                          value: null, // Postavljamo vrednost na null
+                          value: null,
                           child: Text(
-                            'Svi gradovi',
-                            style: TextStyle(
-                              color: Colors.grey,
-                            ), // Siva boja za ovu opciju
+                            'Svi Gradovi',
+                            style: TextStyle(color: Colors.grey),
                           ),
                         ),
                         ...CitiesList.cities.map((String city) {
@@ -270,12 +598,9 @@ class _SalonListScreenState extends State<SalonListScreen> {
                             child: Text(
                               city,
                               style: TextStyle(
-                                color:
-                                    _selectedCity == city
-                                        ? const Color(
-                                          0xFF26A69A,
-                                        ) // Promena boje za izabrani grad
-                                        : Colors.black,
+                                color: _selectedCity == city
+                                    ? Colors.teal.shade600
+                                    : Colors.black,
                               ),
                             ),
                           );
@@ -283,313 +608,273 @@ class _SalonListScreenState extends State<SalonListScreen> {
                       ],
                       onChanged: (String? newValue) {
                         setState(() {
-                          _selectedCity =
-                              newValue; // Postavljamo _selectedCity na null ako je izabrana opcija "Svi gradovi"
+                          _selectedCity = newValue;
                         });
                       },
+                      borderRadius: BorderRadius.circular(12),
+                      icon: Icon(Icons.arrow_drop_down, color: Colors.teal.shade600),
                     ),
                   ),
                 ),
               ],
             ),
           ),
+          
+          // Tab Bar
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 10),
+            margin: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF26A69A).withOpacity(0.9),
-                  const Color(0xFF80CBC4).withOpacity(0.9),
-                ],
-              ),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withOpacity(0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
               ],
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                TextButton(
-                  onPressed: () {
-                    _onTabSelected(0);
-                  },
-                  child: Text(
-                    'Svi Saloni',
-                    style: TextStyle(
-                      color:
-                          _selectedTabIndex == 0
-                              ? Colors.white
-                              : Colors.white.withOpacity(0.6),
-                      fontWeight: FontWeight.bold,
-                    ),
+                Expanded(
+                  child: _TabButton(
+                    text: 'Svi Saloni',
+                    isSelected: _selectedTabIndex == 0,
+                    onTap: () => _onTabSelected(0),
                   ),
                 ),
-                TextButton(
-                  onPressed: () {
-                    _onTabSelected(1);
-                  },
-                  child: Text(
-                    'Preporučeni',
-                    style: TextStyle(
-                      color:
-                          _selectedTabIndex == 1
-                              ? Colors.white
-                              : Colors.white.withOpacity(0.6),
-                      fontWeight: FontWeight.bold,
-                    ),
+                Expanded(
+                  child: _TabButton(
+                    text: 'Popularni',
+                    isSelected: _selectedTabIndex == 1,
+                    onTap: () => _onTabSelected(1),
                   ),
                 ),
-                TextButton(
-                  onPressed: () {
-                    _onTabSelected(2);
-                  },
-                  child: Text(
-                    'Omiljeni',
-                    style: TextStyle(
-                      color:
-                          _selectedTabIndex == 2
-                              ? Colors.white
-                              : Colors.white.withOpacity(0.6),
-                      fontWeight: FontWeight.bold,
-                    ),
+                Expanded(
+                  child: _TabButton(
+                    text: 'Favoriti',
+                    isSelected: _selectedTabIndex == 2,
+                    onTap: () => _onTabSelected(2),
                   ),
                 ),
               ],
             ),
           ),
+          
+          const SizedBox(height: 16),
+          
           // Salon List
           Expanded(
             child: StreamBuilder(
-              stream:
-                  FirebaseFirestore.instance.collection('saloni').snapshots(),
+              stream: FirebaseFirestore.instance.collection('saloni').snapshots(),
               builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: Color(0xFF26A69A)),
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.teal.shade600,
+                      strokeWidth: 2,
+                    ),
                   );
                 }
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return Center(
-                    child: Text(
-                      "Nema dostupnih salona.",
-                      style: TextStyle(color: Colors.grey[700], fontSize: 16),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.store_mall_directory, size: 48, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          "Nema dostupnih salona",
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 }
 
                 var salons = snapshot.data!.docs;
 
-                // Filter salons based on search query and selected tab
-                var filteredSalons =
-                    salons.where((salon) {
-                      var salonData = salon.data() as Map<String, dynamic>;
-                      String naziv = salonData['naziv'] ?? '';
-                      String grad = salonData['grad'] ?? '';
+                var filteredSalons = salons.where((salon) {
+                  var salonData = salon.data() as Map<String, dynamic>;
+                  String naziv = salonData['naziv'] ?? '';
+                  String grad = salonData['grad'] ?? '';
 
-                      // Filtriraj po pretrazi
-                      if (_searchQuery.isNotEmpty &&
-                          !naziv.toLowerCase().contains(
-                            _searchQuery.toLowerCase(),
-                          )) {
-                        return false;
-                      }
+                  if (_searchQuery.isNotEmpty &&
+                      !naziv.toLowerCase().contains(_searchQuery.toLowerCase())) {
+                    return false;
+                  }
 
-                      // Filtriraj po izabranom gradu
-                      if (_selectedCity != null && grad != _selectedCity) {
-                        return false;
-                      }
+                  if (_selectedCity != null && grad != _selectedCity) {
+                    return false;
+                  }
 
-                      // Filtriraj po tabu (Following, Popular, Recent)
-                      if (_selectedTabIndex == 2 &&
-                          !_favoritedSalons.contains(salon.id)) {
-                        return false;
-                      }
+                  if (_selectedTabIndex == 2 && !_favoritedSalons.contains(salon.id)) {
+                    return false;
+                  }
 
-                      return true;
-                    }).toList();
+                  return true;
+                }).toList();
 
-                // Sort salons by favorites (for Popular tab)
                 if (_selectedTabIndex == 1) {
                   filteredSalons.sort((a, b) {
-                    int aFavorites =
-                        (a.data() as Map<String, dynamic>)['favorites'] ?? 0;
-                    int bFavorites =
-                        (b.data() as Map<String, dynamic>)['favorites'] ?? 0;
-                    return bFavorites.compareTo(aFavorites); // Descending order
+                    int aFavorites = (a.data() as Map<String, dynamic>)['favorites'] ?? 0;
+                    int bFavorites = (b.data() as Map<String, dynamic>)['favorites'] ?? 0;
+                    return bFavorites.compareTo(aFavorites);
                   });
                 }
 
                 return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: filteredSalons.length,
                   itemBuilder: (context, index) {
                     var salonDoc = filteredSalons[index];
                     var salon = salonDoc.data() as Map<String, dynamic>;
                     String idSalona = salonDoc.id;
                     String naziv = salon['naziv'] ?? 'Nepoznat salon';
-                    String adresa = salon['adresa'] ?? 'Bez adrese';
+                    String adresa = salon['adresa'] ?? 'Nema adrese';
                     String brojTelefona = salon['brojTelefona'] ?? 'Nema broja';
-                    String? logoUrl = salon['logoUrl']; // Get logo URL
-                    int favorites =
-                        salon['favorites'] ?? 0; // Get favorite count
+                    String? logoUrl = salon['logoUrl'];
+                    int favorites = salon['favorites'] ?? 0;
 
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      elevation: 4,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(15),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) =>
-                                      BookingScreen(idSalona: idSalona),
-                            ),
-                          );
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            children: [
-                              // Salon Logo
-                              Container(
-                                width: 60,
-                                height: 60,
-                                decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFF26A69A,
-                                  ).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(15),
+                    return GestureDetector(
+                      onLongPress: () => _showSalonDetails(salon),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: Material(
+                          borderRadius: BorderRadius.circular(16),
+                          color: Colors.white,
+                          elevation: 2,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => BookingScreen(idSalona: idSalona),
                                 ),
-                                child: FutureBuilder(
-                                  future:
-                                      FirebaseStorage.instance
-                                          .ref('salon_logos/1742902410946.jpg')
-                                          .getDownloadURL(),
-                                  builder: (context, snapshot) {
-                                    if (snapshot.connectionState ==
-                                        ConnectionState.waiting) {
-                                      return const Center(
-                                        child: CircularProgressIndicator(),
-                                      );
-                                    }
-
-                                    if (snapshot.hasError) {
-                                      print(
-                                        'Error getting download URL: ${snapshot.error}',
-                                      );
-                                      return const Icon(Icons.error);
-                                    }
-
-                                    if (snapshot.hasData) {
-                                      final url = snapshot.data!;
-                                      print('Using image URL: $url');
-
-                                      return Image.network(
-                                        url,
-                                        fit: BoxFit.cover,
-                                        loadingBuilder: (
-                                          context,
-                                          child,
-                                          progress,
-                                        ) {
-                                          if (progress == null) return child;
-                                          return Center(
-                                            child: CircularProgressIndicator(
-                                              value:
-                                                  progress.expectedTotalBytes !=
-                                                          null
-                                                      ? progress
-                                                              .cumulativeBytesLoaded /
-                                                          progress
-                                                              .expectedTotalBytes!
-                                                      : null,
+                              );
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Salon Logo
+                                  Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      color: Colors.grey[100],
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: logoUrl != null && logoUrl.isNotEmpty
+                                          ? _buildSalonImage(logoUrl)
+                                          : _buildPlaceholderIcon(),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  // Salon Details
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          naziv,
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black87,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.location_on_outlined,
+                                              size: 16,
+                                              color: Colors.grey[600],
                                             ),
-                                          );
-                                        },
-                                        errorBuilder: (
-                                          context,
-                                          error,
-                                          stackTrace,
-                                        ) {
-                                          print('Image load error: $error');
-                                          return const Icon(Icons.broken_image);
-                                        },
-                                      );
-                                    }
-
-                                    return const Icon(Icons.store);
-                                  },
-                                ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                adresa,
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.grey[600],
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.phone_outlined,
+                                              size: 16,
+                                              color: Colors.grey[600],
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              brojTelefona,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.favorite,
+                                              size: 16,
+                                              color: Colors.pink[400],
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              '$favorites',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                            const Spacer(),
+                                            IconButton(
+                                              icon: Icon(
+                                                _favoritedSalons.contains(idSalona)
+                                                    ? Icons.favorite
+                                                    : Icons.favorite_border,
+                                                color: _favoritedSalons.contains(idSalona)
+                                                    ? Colors.pink[400]
+                                                    : Colors.grey[400],
+                                              ),
+                                              onPressed: () {
+                                                _toggleFavorite(idSalona);
+                                              },
+                                              padding: EdgeInsets.zero,
+                                              constraints: const BoxConstraints(),
+                                              iconSize: 24,
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 16),
-                              // Salon Details
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      naziv,
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF26A69A),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      adresa,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[700],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      brojTelefona,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[700],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Favorites: $favorites', // Display favorite count
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[700],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Heart Icon for Favoriting
-                              IconButton(
-                                icon: Icon(
-                                  _favoritedSalons.contains(idSalona)
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  color:
-                                      _favoritedSalons.contains(idSalona)
-                                          ? Colors.red
-                                          : Colors.grey,
-                                ),
-                                onPressed: () {
-                                  _toggleFavorite(idSalona);
-                                },
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
@@ -600,6 +885,122 @@ class _SalonListScreenState extends State<SalonListScreen> {
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: _BottomNavigationBar(
+        currentIndex: _currentBottomIndex,
+        onTap: (index) {
+          setState(() {
+            _currentBottomIndex = index;
+            if (index == 0) {
+              // Home - do nothing, we're already here
+            } else if (index == 1) {
+              // My Reservations - placeholder for now
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Moje rezervacije uskoro dolaze!'),
+                  backgroundColor: Colors.teal.shade600,
+                ),
+              );
+            } else if (index == 2) {
+              // Profile
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ProfileScreen()),
+              );
+            }
+          });
+        },
+      ),
+    );
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  final String text;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _TabButton({
+    required this.text,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.teal.shade600.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: isSelected ? Colors.teal.shade600 : Colors.grey[600],
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BottomNavigationBar extends StatelessWidget {
+  final int currentIndex;
+  final Function(int) onTap;
+
+  const _BottomNavigationBar({
+    required this.currentIndex,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: Offset(0, -5),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        child: BottomNavigationBar(
+          currentIndex: currentIndex,
+          onTap: onTap,
+          backgroundColor: Colors.white,
+          selectedItemColor: Colors.teal.shade600,
+          unselectedItemColor: Colors.grey[600],
+          selectedLabelStyle: TextStyle(fontWeight: FontWeight.w500),
+          unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w400),
+          elevation: 8,
+          items: [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Početna',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.calendar_today_outlined),
+              activeIcon: Icon(Icons.calendar_today),
+              label: 'Moje Rezervacije',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Profil',
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -38,6 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
           content: Text(
             'Email za resetovanje lozinke je poslan. Provjerite svoj inbox.',
           ),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     } catch (e) {
@@ -56,9 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder:
-            (context) =>
-                AppointmentsScreen(idSalona: idSalona, isOwner: isOwner),
+        builder: (context) => AppointmentsScreen(idSalona: idSalona, isOwner: isOwner),
       ),
     );
   }
@@ -66,295 +65,252 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF26A69A), Color(0xFF80CBC4)],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 40),
-                    const Text(
-                      'Prijava',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                      ),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 40),
+              /*Center(
+                child: Image.asset(
+                  'assets/icons/logo.png', 
+                  height: 70,
+                ),
+              ),*/
+              const SizedBox(height: 40),
+              Text(
+                'Dobro došli nazad',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
-                    const SizedBox(height: 40),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 5,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Email',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
-                              fontSize: 14,
-                            ),
-                          ),
-                          TextField(
-                            controller: _emailController,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: 'Unesite vašu email adresu',
-                              hintStyle: TextStyle(
-                                color: Colors.white.withOpacity(0.5),
-                              ),
-                            ),
-                            keyboardType: TextInputType.emailAddress,
-                          ),
-                        ],
-                      ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Prijavite se da nastavite',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Colors.grey.shade600,
                     ),
-                    const SizedBox(height: 20),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 5,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Šifra',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
-                              fontSize: 14,
-                            ),
-                          ),
-                          TextField(
-                            controller: _passwordController,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: 'Unesite vašu šifru',
-                              hintStyle: TextStyle(
-                                color: Colors.white.withOpacity(0.5),
-                              ),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                  color: Colors.white.withOpacity(0.8),
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
-                              ),
-                            ),
-                            obscureText: _obscurePassword,
-                          ),
-                        ],
-                      ),
+              ),
+              const SizedBox(height: 32),
+              TextField(
+                controller: _emailController,
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  labelStyle: TextStyle(color: Colors.grey.shade600),
+                  prefixIcon: Icon(Icons.email_outlined, color: Colors.grey.shade600),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.teal.shade400, width: 2),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                ),
+                keyboardType: TextInputType.emailAddress,
+                style: TextStyle(color: Colors.grey.shade800),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _passwordController,
+                obscureText: _obscurePassword,
+                decoration: InputDecoration(
+                  labelText: 'Šifra',
+                  labelStyle: TextStyle(color: Colors.grey.shade600),
+                  prefixIcon: Icon(Icons.lock_outline, color: Colors.grey.shade600),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.grey.shade600,
                     ),
-                    const SizedBox(height: 10),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          _forgotPassword(context);
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.teal.shade400, width: 2),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                ),
+                style: TextStyle(color: Colors.grey.shade800),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: rememberMe,
+                        onChanged: (value) {
+                          setState(() {
+                            rememberMe = value!;
+                          });
                         },
-                        child: Text(
-                          'Zaboravljena šifra?',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
-                            fontSize: 12,
-                          ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
                         ),
+                        side: BorderSide(color: Colors.grey.shade400),
+                        activeColor: Colors.teal.shade400,
                       ),
+                      Text(
+                        'Zapamti me',
+                        style: TextStyle(color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ),
+                  TextButton(
+                    onPressed: () => _forgotPassword(context),
+                    child: Text(
+                      'Zaboravljena šifra?',
+                      style: TextStyle(color: Colors.teal.shade600),
                     ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: rememberMe,
-                          onChanged: (value) {
-                            setState(() {
-                              rememberMe = value!;
-                            });
-                          },
-                          checkColor: Color(0xFF26A69A),
-                          fillColor: WidgetStateProperty.resolveWith(
-                            (states) => Colors.white,
-                          ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    if (_emailController.text == 'admin' &&
+                        _passwordController.text == 'DzenoMirza1322') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SalonCreationScreen(),
                         ),
-                        Text(
-                          'Zapamti me',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
-                            fontSize: 14,
-                          ),
-                        ),
-                        Spacer(),
-                        SizedBox(
-                          height: 40,
-                          width: 100,
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              if (_emailController.text == 'admin' &&
-                                  _passwordController.text == 'DzenoMirza1322') {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) =>
-                                            const SalonCreationScreen(),
-                                  ),
-                                );
-                              } else {
-                                User? user = await _authService
-                                    .signInWithEmailAndPassword(
-                                      _emailController.text,
-                                      _passwordController.text,
-                                    );
-                                if (user != null) {
-                                  // Provjera da li je korisnik admin ili ima verificiran email
-                                  if (!user.emailVerified &&
-                                      !isDev &&
-                                      _emailController.text != 'admin') {
-                                    setState(() {
-                                      errorMessage =
-                                          "Molimo verificirajte svoj email prije prijave!";
-                                    });
+                      );
+                    } else {
+                      User? user = await _authService.signInWithEmailAndPassword(
+                        _emailController.text,
+                        _passwordController.text,
+                      );
+                      if (user != null) {
+                        if (!user.emailVerified && !isDev && _emailController.text != 'admin') {
+                          setState(() {
+                            errorMessage = "Molimo verificirajte svoj email prije prijave!";
+                          });
 
-                                    await user.sendEmailVerification();
+                          await user.sendEmailVerification();
 
-                                    showDialog(
-                                      context: context,
-                                      builder:
-                                          (context) => AlertDialog(
-                                            title: Text(
-                                              'Verifikacija emaila potrebna',
-                                            ),
-                                            content: Text(
-                                              'Poslali smo vam verifikacioni email. Molimo provjerite inbox i kliknite na link za verifikaciju prije nego što se prijavite.',
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed:
-                                                    () =>
-                                                        Navigator.pop(context),
-                                                child: Text('OK'),
-                                              ),
-                                            ],
-                                          ),
-                                    );
-                                    return;
-                                  }
-
-                                  Map<String, dynamic>? userData =
-                                      await _authService.getUserData(user.uid);
-                                  if (userData != null &&
-                                      userData['salonId'] != "") {
-                                    bool isOwner =
-                                        userData['salonId'] != null &&
-                                        userData['salonId'] != "";
-                                    _navigateToAppointments(
-                                      context,
-                                      userData['salonId'] ?? "",
-                                      isOwner,
-                                    );
-                                  } else {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (context) =>
-                                                const SalonListScreen(),
-                                      ),
-                                    );
-                                  }
-                                } else {
-                                  setState(() {
-                                    errorMessage = "Prijava nije uspjela!";
-                                  });
-                                }
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.teal.shade800,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: Text('Verifikacija emaila potrebna'),
+                              content: Text(
+                                'Poslali smo vam verifikacioni email. Molimo provjerite inbox i kliknite na link za verifikaciju prije nego što se prijavite.',
                               ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: Text('OK'),
+                                ),
+                              ],
                             ),
-                            child: const Text('Prijava'),
+                          );
+                          return;
+                        }
+
+                        Map<String, dynamic>? userData = await _authService.getUserData(user.uid);
+                        if (userData != null && userData['salonId'] != "") {
+                          bool isOwner = userData['salonId'] != null && userData['salonId'] != "";
+                          _navigateToAppointments(
+                            context,
+                            userData['salonId'] ?? "",
+                            isOwner,
+                          );
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SalonListScreen(),
+                            ),
+                          );
+                        }
+                      } else {
+                        setState(() {
+                          errorMessage = "Prijava nije uspjela!";
+                        });
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal.shade600,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Prijava',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+              if (errorMessage.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16.0),
+                  child: Text(
+                    errorMessage,
+                    style: TextStyle(color: Colors.red.shade600),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              
+              const SizedBox(height: 24),
+              Center(
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => RegisterScreen(),
+                      ),
+                    );
+                  },
+                  child: RichText(
+                    text: TextSpan(
+                      style: TextStyle(color: Colors.grey.shade600),
+                      children: [
+                        const TextSpan(text: "Nemaš račun? "),
+                        TextSpan(
+                          text: 'Registruj se',
+                          style: TextStyle(
+                            color: Colors.teal.shade600,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 30),
-                    Center(
-                      child: TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => RegisterScreen(),
-                            ),
-                          );
-                        },
-                        child: RichText(
-                          text: TextSpan(
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
-                              fontSize: 14,
-                            ),
-                            children: const [
-                              TextSpan(text: "Nemaš račun? "),
-                              TextSpan(
-                                text: 'Registruj se',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    if (errorMessage.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          errorMessage,
-                          style: TextStyle(color: Colors.red.shade100),
-                        ),
-                      ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: 20),
+            ],
           ),
         ),
       ),

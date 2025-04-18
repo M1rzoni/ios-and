@@ -8,6 +8,8 @@ import 'package:frizerski_salon/screens/login_screen.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:mailto/mailto.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -31,6 +33,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isEditing = false;
   bool _isImageUploading = false;
   String _errorMessage = '';
+  bool _showPrivacyPolicy = false;
+  bool _showDeleteConfirmation = false;
 
   @override
   void initState() {
@@ -139,7 +143,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _updateProfile() async {
     try {
       await _firestore.collection('users').doc(_currentUser.uid).update({
-        'fullName': _nameController.text,
         'phoneNumber': _phoneController.text,
       });
 
@@ -174,6 +177,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _deleteAccount() async {
+    try {
+      // Delete all appointments for this user
+      final appointments = await _firestore
+          .collection('termini')
+          .where('userId', isEqualTo: _currentUser.uid)
+          .get();
+
+      for (var doc in appointments.docs) {
+        await doc.reference.delete();
+      }
+
+      // Delete user document
+      await _firestore.collection('users').doc(_currentUser.uid).delete();
+
+      // Delete profile image if exists
+      if (_profileImageUrl != null) {
+        final ref = FirebaseStorage.instance.refFromURL(_profileImageUrl!);
+        await ref.delete();
+      }
+
+      // Delete auth user
+      await _currentUser.delete();
+
+      // Logout and redirect to login
+      _logout(context);
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error deleting account: $e';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _launchEmail() async {
+    final mailtoLink = Mailto(
+      to: ['dzeno.brcaninovic@gmail.com'],
+      subject: 'SalonTime Support',
+    );
+    await launchUrl(Uri.parse(mailtoLink.toString()));
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -186,7 +236,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
       appBar: AppBar(
         title: const Text('Moj Profil'),
         backgroundColor: const Color(0xFF26A69A),
@@ -295,7 +344,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                         const SizedBox(height: 30),
-                        _buildEditableField('Ime i prezime', _nameController, Icons.person),
+                        _buildNonEditableField('Ime i prezime', _nameController, Icons.person),
                         const SizedBox(height: 20),
                         _buildEditableField('Email', _emailController, Icons.email),
                         const SizedBox(height: 20),
@@ -308,6 +357,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Icons.lock,
                             isPassword: true,
                           ),
+                        
+                        // Privacy and Security Section
+                        const SizedBox(height: 30),
+                        const Text(
+                          'Privatnost i sigurnost',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF26A69A),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _buildSettingItem(
+                          icon: Icons.privacy_tip,
+                          title: 'Politika privatnosti',
+                          onTap: () {
+                            setState(() {
+                              _showPrivacyPolicy = !_showPrivacyPolicy;
+                            });
+                          },
+                        ),
+                        if (_showPrivacyPolicy)
+                          _buildPrivacyPolicyContent(),
+                        
+                        _buildSettingItem(
+                          icon: Icons.mail,
+                          title: 'Kontaktirajte nas',
+                          onTap: _launchEmail,
+                        ),
+                        
+                        _buildSettingItem(
+                          icon: Icons.delete,
+                          title: 'Obriši račun',
+                          color: Colors.red,
+                          onTap: () {
+                            setState(() {
+                              _showDeleteConfirmation = true;
+                            });
+                          },
+                        ),
+                        if (_showDeleteConfirmation)
+                          _buildDeleteConfirmation(),
+                        
                         if (_errorMessage.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -367,6 +459,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _buildNonEditableField(
+    String label,
+    TextEditingController controller,
+    IconData icon,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF26A69A),
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+            ),
+          ),
+          TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              hintText: '$label',
+              hintStyle: TextStyle(color: Colors.grey.shade400),
+              prefixIcon: Icon(icon, color: const Color(0xFF26A69A)),
+            ),
+            enabled: false,
+            style: TextStyle(color: Colors.grey.shade700),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEditableField(
     String label,
     TextEditingController controller,
@@ -408,6 +538,191 @@ class _ProfileScreenState extends State<ProfileScreen> {
             enabled: _isEditing,
             keyboardType:
                 label == 'Broj telefona' ? TextInputType.phone : TextInputType.text,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingItem({
+    required IconData icon,
+    required String title,
+    Color color = const Color(0xFF26A69A),
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(width: 16),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: color,
+              ),
+            ),
+            const Spacer(),
+            Icon(Icons.chevron_right, color: color),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrivacyPolicyContent() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Politika privatnosti',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF26A69A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Ova politika privatnosti odnosi se na aplikaciju SalonTime.',
+            style: TextStyle(fontSize: 14),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Prikupljanje i upotreba podataka',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'SalonTime ne prikuplja osobne podatke korisnika bez njihovog znanja. Podaci o rezervacijama klijenata pohranjuju se lokalno ili unutar sigurnih baza podataka, ovisno o implementaciji.',
+            style: TextStyle(fontSize: 14),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Dijeljenje podataka',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Ne dijelimo korisničke podatke s trećim stranama. Podaci se koriste isključivo za funkcioniranje aplikacije.',
+            style: TextStyle(fontSize: 14),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Vaša prava',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Korisnici imaju pravo zatražiti brisanje podataka ili dodatne informacije kontaktiranjem nas putem e-maila.',
+            style: TextStyle(fontSize: 14),
+          ),
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: _launchEmail,
+            child: const Text(
+              'Pošaljite nam e-mail na: dzeno.brcaninovic@gmail.com',
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF26A69A),
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeleteConfirmation() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Jeste li sigurni da želite obrisati račun?',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Ova akcija će trajno obrisati vaš račun i sve povezane podatke. Ova akcija se ne može poništiti.',
+            style: TextStyle(fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {
+                    setState(() {
+                      _showDeleteConfirmation = false;
+                    });
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF26A69A),
+                    side: const BorderSide(color: Color(0xFF26A69A)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Odustani'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _deleteAccount,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Obriši račun'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
